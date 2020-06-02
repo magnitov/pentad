@@ -4,6 +4,7 @@ import h5py
 import cv2
 import numpy as np
 import pandas as pd
+import multiprocess as mp
 import cooler
 from cooltools import numutils
 from cooltools.expected import trans_expected, blocksum_pairwise
@@ -89,8 +90,7 @@ parser.add_argument('--distance', default = 0.75, type = float, required = False
                     help = 'Maximum distance between two intervals in chromosome fractions')
 parser.add_argument('--excl_chrms', default = 'Y,M,MT', type = str, required = False,
                     help = 'Chromosomes to exclude from analysis')
-parser.add_argument('--multiprocess', default = '', type = str, required = False,
-                    help = 'Usage of multiprocess. Every non-empty string activates its usage')
+
 # Plot
 parser.add_argument('--vmin', default = 0.4, type = float, required = False,
                     help = 'Lower limit for the colormap')
@@ -117,7 +117,6 @@ max_zeros = args.max_zeros
 distance_cutoff = args.distance
 excl_chrms = args.excl_chrms.split(',')
 excl_chrms = excl_chrms + ['chr' + chrm for chrm in excl_chrms]
-mult = args.multiprocess
 
 vmin = args.vmin
 vmax = args.vmax
@@ -143,14 +142,10 @@ resolution = c.info['bin-size']
 supports = [(chrm, 0, chromsizes.loc[chrm,'length']) for chrm in chromosomes]
 balanced_transform = {"balanced": lambda pixels: pixels["count"] * pixels["weight1"] * pixels["weight2"]}
 
-if mult != '':
-    import multiprocess as mp
-    records = blocksum_pairwise(c, supports,
-                                transforms=balanced_transform,
-                                chunksize=resolution,
-                                map=mp.Pool().map)
-else:
-    records = blocksum_pairwise(c, supports, transforms=balanced_transform, chunksize=resolution)
+records = blocksum_pairwise(c, supports,
+                            transforms=balanced_transform,
+                            chunksize=resolution,
+                            map=mp.Pool().map)
 
 trans_records = {
         ( region1[0], region2[0] ): val for ( region1, region2 ), val in records.items()
