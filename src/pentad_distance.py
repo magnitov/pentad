@@ -94,13 +94,13 @@ parser.add_argument('--rescale_size', default = 33, type = int, required = False
                     help = 'Size to rescale all areas in average compartment')
 parser.add_argument('--min_dimension', default = 3, type = int, required = False,
                     help = 'Minimum dimension of an area (in genomic bins)')
-parser.add_argument('--max_zeros', default = 0.1, type = float, required = False,
+parser.add_argument('--max_zeros', default = 0.5, type = float, required = False,
                     help = 'Maximum fraction of bins with zero contacts in an area')
 parser.add_argument('--cutoff', default = 0.75, type = float, required = False,
                     help = 'Maximum distance between two intervals in chromosome fractions')
 parser.add_argument('--distances', nargs = '+', type = int, required = True,
-                    help = 'Distance boundaries for <> in Mb') # Finish!  Maybe use string.split(',') instead of nargs
-                    # maybe [0] will work!
+                    help = 'Distance boundaries in Mb separated by \' \'. \n
+                    For example, \'10 100\' will give <10 Mb, 10-100 Mb, >100 Mb')
 parser.add_argument('--excl_chrms', default='Y,M,MT', type = str, required = False,
                     help = 'Chromosomes to exclude from analysis')
 # Plot
@@ -128,7 +128,6 @@ min_dimension = args.min_dimension
 max_zeros = args.max_zeros
 distance_cutoff = args.cutoff
 distance_intervals = [i*10**6 for i in args.distances]
-interval_number = len(distance_intervals) + 1
 excl_chrms = args.excl_chrms.split(',')
 excl_chrms = excl_chrms + ['chr' + chrm for chrm in excl_chrms]
 
@@ -151,9 +150,20 @@ chromosomes = c.chroms()[:]['name'].values
 chromosomes = [chrm for chrm in chromosomes if chrm not in excl_chrms]
 resolution = c.info['bin-size']
 
+# Make intervals list
+interval_number = len(distance_intervals) + 1
+distance_titles = []
+distance_titles.append('<{} Mb'.format(distance_intervals[0]/10**6))
+distance_titles.append('>{} Mb'.format(distance_intervals[-1]/10**6))
+
+if interval_number > 2:
+    for i in range(interval_number - 2):
+        distance_titles.insert(i+1,'{}–{} Mb'.format(distance_intervals[i]/10**6,
+                                                     distance_intervals[i+1]/10**6))
+
 # Calculate average compartment
-average_compartment = [ [ [], [], [] ] for i in range(interval_number)]
-areas_stats = [ [ [0], [0], [0] ] for i in range(interval_number)]
+average_compartment = { i: [ [], [], [] ] for i in distance_titles}
+areas_stats = { i: [ [0], [0], [0] ] for i in distance_titles}
 for chromosome in chromosomes:
     print('Chromosome {}...'.format(chromosome))
 
@@ -180,37 +190,29 @@ for chromosome in chromosomes:
 
                     area_resized = resize_area(area, rescale_size)
                     area_type = get_area_type(all_intervals[i], all_intervals[j],
-                                          intervals_A, intervals_B)
+                                              intervals_A, intervals_B)
 
                     index = get_distance_index(all_intervals[i], all_intervals[j], distance_intervals, resolution)
 
                     if area_type == 'A':
-                        average_compartment[index][0].append(area_resized)
+                        average_compartment[distance_titles[index]][0].append(area_resized)
                     elif area_type == 'B':
-                        average_compartment[index][1].append(area_resized)
+                        average_compartment[distance_titles[index]][1].append(area_resized)
                     elif area_type == 'AB':
-                        average_compartment[index][2].append(area_resized)
+                        average_compartment[distance_titles[index]][2].append(area_resized)
 
-    for i in range(interval_number):
+    for i in distance_titles:
         for j in range(3):
             areas_stats[i][j].append(len(average_compartment[i][j])-np.sum(areas_stats[i][j]))
 
-for i in range(interval_number):
+for i in distance_titles:
     average_compartment[i] = [np.nanmedian(x, axis = 0) for x in average_compartment[i]]
 
-np.save(out_pref + '.npy', np.array(average_compartment))
+with h5py.File(out_pref + '.hdf5', 'w') as f:
+    for i in distance_titles:
+        f.create_dataset(i, data=average_compartment[i])
+
 print('Average compartment calculated!')
-
-distance_titles = []
-distance_titles.append('>{} Mb'.format(distance_intervals[-1]/10**6))
-if interval_number > 1:
-    distance_titles.insert(0,'<{} Mb'.format(distance_intervals[0]/10**6))
-
-if interval_number > 2:
-    for i in range(interval_number - 2):
-        distance_titles.insert(i+1,'{}–{} Mb'.format(distance_intervals[i]/10**6,
-                                                     distance_intervals[i+2]/10**6))
-
 print('Total areas piled-up:')
 for dist_title in distance_titles:
     print('\t{}:\n\tA: {}\n\t\tB: {}\
@@ -222,20 +224,17 @@ for dist_title in distance_titles:
 
 # Visualize average compartment
 row_titles = ['A', 'B', 'AB']
-subplot_indexes = []
-for i in range(interval_number):
-    subplot_indexes += [ i + 1,
-                         i + 1 + interval_number,
-                         i + 1 + 2 * interval_number]
 
 fig = plt.figure(figsize = ( interval_number * 4, 12 ))
-#plt.suptitle(title, x = 0.5125, y = 0.98, fontsize = 22)
+plt.suptitle(title, x = 0.5125, y = 0.98, fontsize = 22)
 
-for layout, index in zip(average_compartment, subplot_indexes):
-    plt.subplot(interval_number, 3, index)
-    plt.imshow(layout, cmap = cmap, norm = LogNorm(vmax = vmax, vmin = vmin))
-    plt.xticks([], [])
-    plt.yticks([], [])
+for i in range(interval_number):
+    for j in range(3):
+        plt.subplot(3, interval_number, j*interval_number+i+1)
+        plt.imshow(average_compartment[distance_titles[i]][j], cmap = cmap, norm = LogNorm(vmax = vmax, vmin = vmin))
+        plt.title('{} {}'.format(distance_titles[i],row_titles[j]), fontsize = 20)
+        plt.xticks([], [])
+        plt.yticks([], [])
 
 cbar_ax = fig.add_axes([0.95, 0.25, 0.02, 0.5])
 cbar = plt.colorbar(cax = cbar_ax)
