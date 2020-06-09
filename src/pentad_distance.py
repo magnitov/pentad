@@ -99,8 +99,9 @@ parser.add_argument('--max_zeros', default = 0.5, type = float, required = False
 parser.add_argument('--cutoff', default = 0.75, type = float, required = False,
                     help = 'Maximum distance between two intervals in chromosome fractions')
 parser.add_argument('--distances', nargs = '+', type = int, required = True,
-                    help = 'Distance boundaries in Mb separated by \' \'. \n
-                    For example, \'10 100\' will give <10 Mb, 10-100 Mb, >100 Mb')
+                    help = 'Distance boundaries in Mb separated by. For example, 10 100 will give <10 Mb, 10-100 Mb, >100 Mb')
+parser.add_argument('--closed', action = 'store_true', required = False,
+                    help = 'If called closes intervals')
 parser.add_argument('--excl_chrms', default='Y,M,MT', type = str, required = False,
                     help = 'Chromosomes to exclude from analysis')
 # Plot
@@ -128,6 +129,7 @@ min_dimension = args.min_dimension
 max_zeros = args.max_zeros
 distance_cutoff = args.cutoff
 distance_intervals = [i*10**6 for i in args.distances]
+closed = args.closed
 excl_chrms = args.excl_chrms.split(',')
 excl_chrms = excl_chrms + ['chr' + chrm for chrm in excl_chrms]
 
@@ -215,15 +217,18 @@ with h5py.File(out_pref + '.hdf5', 'w') as f:
 print('Average compartment calculated!')
 print('Total areas piled-up:')
 for dist_title in distance_titles:
-    print('\t{}:\n\tA: {}\n\t\tB: {}\
+    print('\t{}:\n\t\tA: {}\n\t\tB: {}\
                          \n\t\tAB: {}\n'.format(dist_title,
-                                              np.sum(areas_stats[0]),
-                                              np.sum(areas_stats[1]),
-                                              np.sum(areas_stats[2])))
+                                              np.sum(areas_stats[dist_title][0]),
+                                              np.sum(areas_stats[dist_title][1]),
+                                              np.sum(areas_stats[dist_title][2])))
 
 
 # Visualize average compartment
 row_titles = ['A', 'B', 'AB']
+
+if closed:
+    interval_number -= 1
 
 fig = plt.figure(figsize = ( interval_number * 4, 12 ))
 plt.suptitle(title, x = 0.5125, y = 0.98, fontsize = 22)
