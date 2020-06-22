@@ -149,7 +149,7 @@ subs = ['A1', 'A2', 'B1', 'B2', 'B3']
 subplot_titles = [f'{sub} short' for sub in subs]
 subplot_titles += [f'{sub} long' for sub in subs]
 for i in range(0, 5):
-    for j in range(i,5):
+    for j in range(i+1,5):
         subplot_titles.append(f'{subs[i]}-{subs[j]}')
 
 # Calculate average compartment
@@ -159,7 +159,7 @@ for chromosome in chromosomes:
     print('Chromosome {}...'.format(chromosome))
 
     eigenvector = open_eigenvector(comp_signal, chromosome)
-    comp_index = get_compartment_bins(eigenvector, subs)
+    comp_index = get_subcompartment_bins(eigenvector, subs)
     comp_intervals = { sub : calculate_intervals_from_range(comp_index[sub]) for sub in subs}
     all_intervals = np.concatenate(tuple([comp_intervals[sub] for sub in subs]))
     all_intervals.sort()
@@ -182,7 +182,7 @@ for chromosome in chromosomes:
                                           intervals_A, intervals_B)
 
                 if len(area_type) == 2:
-                    if area_is_at_diagonal:
+                    if area_is_at_diagonal(i, j):
                         average_compartment[f'{area_type} short'].append(area_resized)
                     else:
                         average_compartment[f'{area_type} long'].append(area_resized)
@@ -198,26 +198,33 @@ average_compartment = { x: np.nanmedian(average_compartment[x], axis = 0) for x 
 
 print('Average compartment calculated!')
 print('Total areas calculated:')
-with subplot_titles as sb:
-    for i in range(5):
-        print(f'\t{sb[i]}: {np.sum(areas_stats[sb[i]])}\
-              \t{sb[i+5]}: {np.sum(areas_stats[sb[i+5]])}')
-    for sblplt in sb[10:]:
-        print(f'\t{sbplt}: {np.sum(areas_stats[sbplt])}')
+for i in range(5):
+    print(f'\t{subplot_titles[i]}: {np.sum(areas_stats[subplot_titles[i]])}\
+          \t{subplot_titles[i+5]}: {np.sum(areas_stats[subplot_titles[i+5]])}')
+for sbplt in subplot_titles[10:]:
+    print(f'\t{sbplt}: {np.sum(areas_stats[sbplt])}')
 
 # Visualize average compartment
-subplot_titles = ['Short-range A', 'Short-range B',
-                  'Long-range A', 'Long-range B',
-                  'Between A and B']
-subplot_indexes = [4, 8, 6, 2, 5]
+fig = plt.figure(figsize = ( 20, 24 ))
+plt.suptitle(title, x = 0.5125, y = 0.925, fontsize = 22)
+for i in range(5):
+    plt.subplot(6,5,i+1)
+    plt.imshow(average_compartment[subplot_titles[i]], cmap = cmap, norm = LogNorm(vmax = vmax, vmin = vmin))
+    plt.title(subplot_titles[i], fontsize = 20)
+    plt.xticks([], [])
+    plt.yticks([], [])
 
-fig = plt.figure(figsize = (10, 10))
-plt.suptitle(title, x = 0.5125, y = 0.98, fontsize = 22)
+    plt.subplot(6,5,i+6)
+    plt.imshow(average_compartment[subplot_titles[i+5]], cmap = cmap, norm = LogNorm(vmax = vmax, vmin = vmin))
+    plt.title(subplot_titles[i+5], fontsize = 20)
+    plt.xticks([], [])
+    plt.yticks([], [])
 
-for layout, subtitle, index in zip(average_compartment, subplot_titles, subplot_indexes):
-    plt.subplot(3, 3, index)
-    plt.title(subtitle, fontsize = 15)
-    plt.imshow(layout, cmap = cmap, norm = LogNorm(vmax = vmax, vmin = vmin))
+indices = [12, 13, 14, 15, 18, 19, 20, 24, 25, 30]
+for i in range(10):
+    plt.subplot(6,5,indices[i])
+    plt.imshow(average_compartment[subplot_titles[i+10]], cmap = cmap, norm = LogNorm(vmax = vmax, vmin = vmin))
+    plt.title(subplot_titles[i+10], fontsize = 20)
     plt.xticks([], [])
     plt.yticks([], [])
 
