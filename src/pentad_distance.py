@@ -152,7 +152,7 @@ chromosomes = c.chroms()[:]['name'].values
 chromosomes = [chrm for chrm in chromosomes if chrm not in excl_chrms]
 resolution = c.info['bin-size']
 
-# Make intervals list
+# Make distance intervals list
 interval_number = len(distance_intervals) + 1
 distance_titles = []
 distance_titles.append('<{} Mb'.format(distance_intervals[0]/10**6))
