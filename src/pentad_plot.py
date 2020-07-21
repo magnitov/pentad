@@ -13,82 +13,6 @@ sns.set_context('poster')
 import warnings
 warnings.filterwarnings('ignore')
 
-# Different plotting styles
-
-def plot_pentad(average_compartment, **kwargs):
-    subplot_titles = ['Short-range A', 'Short-range B',
-                      'Long-range A', 'Long-range B',
-                      'Between A and B']
-    subplot_indexes = [4, 8, 6, 2, 5]
-
-    fig = plt.figure(figsize = (10, 10))
-    plt.suptitle(title, x = 0.5125, y = 0.98, fontsize = 22)
-
-    for subtitle, index in zip(subplot_titles, subplot_indexes):
-        plt.subplot(3, 3, index)
-        plt.title(subtitle, fontsize = 15)
-        plt.imshow(average_compartment[subtitle], cmap = cmap, norm = LogNorm(vmax = vmax, vmin = vmin))
-        plt.xticks([], [])
-        plt.yticks([], [])
-
-    cbar_ax = fig.add_axes([0.95, 0.25, 0.02, 0.5])
-    cbar = plt.colorbar(cax = cbar_ax)
-
-    plt.savefig(out_pref + '.png', bbox_inches = 'tight')
-    plt.clf()
-
-    print('Visualization created!')
-
-def plot_trans(average_compartment, **kwargs):
-    subplot_titles = ['A', 'B', 'AB']
-    subplot_indexes = [1, 2, 3]
-
-    fig = plt.figure(figsize = (12, 4))
-    plt.suptitle(title, x = 0.5125, y = 1.02, fontsize = 22)
-
-    for subtitle, index in zip(subplot_titles, subplot_indexes):
-        plt.subplot(1, 3, index)
-        plt.title(subtitle, fontsize = 15)
-        plt.imshow(average_compartment[subtitle], cmap = cmap, norm = LogNorm(vmax = vmax, vmin = vmin))
-        plt.xticks([], [])
-        plt.yticks([], [])
-
-    cbar_ax = fig.add_axes([0.95, 0.15, 0.02, 0.7])
-    cbar = plt.colorbar(cax = cbar_ax)
-
-    plt.savefig(out_pref + '.png', bbox_inches = 'tight')
-    plt.clf()
-
-    print('Visualization created!')
-
-def plot_dist(average_compartment, **kwargs):
-    row_titles = ['A', 'B', 'AB']
-
-    distance_titles = list(average_compartment.keys())
-    interval_number = len(distance_titles)
-
-    if closed:
-        interval_number -= 1 # Be careful if change --closed flag
-
-    fig = plt.figure(figsize = ( interval_number * 4, 12 ))
-    plt.suptitle(title, x = 0.5125, y = 0.98, fontsize = 22)
-
-    for i in range(interval_number):
-        for j in range(3):
-            plt.subplot(3, interval_number, j*interval_number+i+1)
-            plt.imshow(average_compartment[distance_titles[i]][j], cmap = cmap, norm = LogNorm(vmax = vmax, vmin = vmin))
-            plt.title('{} {}'.format(distance_titles[i],row_titles[j]), fontsize = 20)
-            plt.xticks([], [])
-            plt.yticks([], [])
-
-    cbar_ax = fig.add_axes([0.95, 0.25, 0.02, 0.5])
-    cbar = plt.colorbar(cax = cbar_ax)
-
-    plt.savefig(out_pref + '.png', bbox_inches = 'tight')
-    plt.clf()
-
-    print('Visualization created!')
-
 # PARSING ARGUMENTS
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
@@ -115,14 +39,13 @@ args = parser.parse_args()
 # Parse arguments
 average_compartment_path = args.average_compartment_path
 
-kwargs = {}
-kwargs[vmin] = args.vmin
-kwargs[vmax] = args.vmax
-kwargs[cmap] = args.cmap
-kwargs[title] = args.title
-kwargs[closed] = args.closed
+vmin = args.vmin
+vmax = args.vmax
+cmap = args.cmap
+title = args.title
+closed = args.closed
 
-kwargs[out_pref] = args.out_pref
+out_pref = args.out_pref
 
 # Read file
 with open(average_compartment_path, 'r') as f:
@@ -132,10 +55,78 @@ with open(average_compartment_path, 'r') as f:
 
 # Plot
 if data_type == 'cis':
-    plot_pentad(average_compartment, **kwargs)
+    subplot_titles = ['Short-range A', 'Short-range B',
+                      'Long-range A', 'Long-range B',
+                      'Between A and B']
+    subplot_indexes = [4, 8, 6, 2, 5]
+
+    fig = plt.figure(figsize = (10, 10))
+    plt.suptitle(title, x = 0.5125, y = 0.98, fontsize = 22)
+
+    for subtitle, index in zip(subplot_titles, subplot_indexes):
+        plt.subplot(3, 3, index)
+        plt.title(subtitle, fontsize = 15)
+        plt.imshow(average_compartment[subtitle], cmap = cmap, norm = LogNorm(vmax = vmax, vmin = vmin))
+        plt.xticks([], [])
+        plt.yticks([], [])
+
+    cbar_ax = fig.add_axes([0.95, 0.25, 0.02, 0.5])
+    cbar = plt.colorbar(cax = cbar_ax)
+
+    plt.savefig(out_pref + '.png', bbox_inches = 'tight')
+    plt.clf()
+
+    print('Visualization created!')
+
 elif data_type == 'trans':
-    plot_trans(average_compartment, **kwargs)
+    subplot_titles = ['A', 'B', 'AB']
+    subplot_indexes = [1, 2, 3]
+
+    fig = plt.figure(figsize = (12, 4))
+    plt.suptitle(title, x = 0.5125, y = 1.02, fontsize = 22)
+
+    for subtitle, index in zip(subplot_titles, subplot_indexes):
+        plt.subplot(1, 3, index)
+        plt.title(subtitle, fontsize = 15)
+        plt.imshow(average_compartment[subtitle], cmap = cmap, norm = LogNorm(vmax = vmax, vmin = vmin))
+        plt.xticks([], [])
+        plt.yticks([], [])
+
+    cbar_ax = fig.add_axes([0.95, 0.15, 0.02, 0.7])
+    cbar = plt.colorbar(cax = cbar_ax)
+
+    plt.savefig(out_pref + '.png', bbox_inches = 'tight')
+    plt.clf()
+
+    print('Visualization created!')
+
 elif data_type == 'dist':
-    plot_dist(average_compartment, **kwargs)
+    row_titles = ['A', 'B', 'AB']
+
+    distance_titles = list(average_compartment.keys())
+    interval_number = len(distance_titles)
+
+    if closed:
+        interval_number -= 1 # Be careful if change --closed flag
+
+    fig = plt.figure(figsize = ( interval_number * 4, 12 ))
+    plt.suptitle(title, x = 0.5125, y = 0.98, fontsize = 22)
+
+    for i in range(interval_number):
+        for j in range(3):
+            plt.subplot(3, interval_number, j*interval_number+i+1)
+            plt.imshow(average_compartment[distance_titles[i]][row_titles[j]], cmap = cmap, norm = LogNorm(vmax = vmax, vmin = vmin))
+            plt.title('{} {}'.format(distance_titles[i],row_titles[j]), fontsize = 20)
+            plt.xticks([], [])
+            plt.yticks([], [])
+
+    cbar_ax = fig.add_axes([0.95, 0.25, 0.02, 0.5])
+    cbar = plt.colorbar(cax = cbar_ax)
+
+    plt.savefig(out_pref + '.png', bbox_inches = 'tight')
+    plt.clf()
+
+    print('Visualization created!')
+
 else:
     raise ValueError('unknown data structure')

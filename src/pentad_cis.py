@@ -1,6 +1,7 @@
 import argparse
 import os
 import h5py
+import json
 import cv2
 import numpy as np
 import pandas as pd
@@ -186,7 +187,6 @@ for chromosome in chromosomes:
 
 
 average_compartment = [np.nanmedian(x, axis = 0) for x in average_compartment]
-np.save(out_pref + '.npy', np.array(average_compartment))
 print('Average compartment calculated!')
 print('Total areas piled-up:\n\tshort-range A: {}\n\tshort-range B: {}\
                             \n\tlong-range A: {}\n\tlong-range B: {}\
@@ -196,26 +196,22 @@ print('Total areas piled-up:\n\tshort-range A: {}\n\tshort-range B: {}\
                                                             np.sum(areas_stats[3]),
                                                             np.sum(areas_stats[4])))
 
-# Visualize average compartment
+# Save output
+output = {
+    'data' : {},
+    'stats' : {},
+    'type' : 'cis'
+}
+
 subplot_titles = ['Short-range A', 'Short-range B',
                   'Long-range A', 'Long-range B',
                   'Between A and B']
-subplot_indexes = [4, 8, 6, 2, 5]
 
-fig = plt.figure(figsize = (10, 10))
-plt.suptitle(title, x = 0.5125, y = 0.98, fontsize = 22)
+for area, stat, title in zip(average_compartment, areas_stats, subplot_titles):
+    output['data'][title] = area.tolist()
+    output['stats'][title] = int(np.sum(stat))
 
-for layout, subtitle, index in zip(average_compartment, subplot_titles, subplot_indexes):
-    plt.subplot(3, 3, index)
-    plt.title(subtitle, fontsize = 15)
-    plt.imshow(layout, cmap = cmap, norm = LogNorm(vmax = vmax, vmin = vmin))
-    plt.xticks([], [])
-    plt.yticks([], [])
+with open(out_pref + '.json', 'w') as w:
+    json.dump(output, w)
 
-cbar_ax = fig.add_axes([0.95, 0.25, 0.02, 0.5])
-cbar = plt.colorbar(cax = cbar_ax)
-
-plt.savefig(out_pref + '.png', bbox_inches = 'tight')
-plt.clf()
-
-print('Visualization created!')
+print('Output saved!')

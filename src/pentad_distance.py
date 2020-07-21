@@ -1,6 +1,7 @@
 import argparse
 import os
 import h5py
+import json
 import cv2
 import numpy as np
 import pandas as pd
@@ -210,10 +211,6 @@ for chromosome in chromosomes:
 for i in distance_titles:
     average_compartment[i] = [np.nanmedian(x, axis = 0) for x in average_compartment[i]]
 
-with h5py.File(out_pref + '.hdf5', 'w') as f:
-    for i in distance_titles:
-        f.create_dataset(i, data=average_compartment[i])
-
 print('Average compartment calculated!')
 print('Total areas piled-up:')
 for dist_title in distance_titles:
@@ -223,28 +220,19 @@ for dist_title in distance_titles:
                                               np.sum(areas_stats[dist_title][1]),
                                               np.sum(areas_stats[dist_title][2])))
 
+# Save output
+output = {
+    'data' : {},
+    'stats' : {},
+    'type' : 'dist'
+}
 
-# Visualize average compartment
 row_titles = ['A', 'B', 'AB']
+for title in distance_titles:
+    output['data'][title] = { row : average_compartment[title][i].tolist() for row, i in zip(row_titles, range(3)) }
+    output['stats'][title] = { row : int(np.sum(areas_stats[title][i])) for row, i in zip(row_titles, range(3)) }
 
-if closed:
-    interval_number -= 1
+with open(out_pref + '.json', 'w') as w:
+    json.dump(output, w)
 
-fig = plt.figure(figsize = ( interval_number * 4, 12 ))
-plt.suptitle(title, x = 0.5125, y = 0.98, fontsize = 22)
-
-for i in range(interval_number):
-    for j in range(3):
-        plt.subplot(3, interval_number, j*interval_number+i+1)
-        plt.imshow(average_compartment[distance_titles[i]][j], cmap = cmap, norm = LogNorm(vmax = vmax, vmin = vmin))
-        plt.title('{} {}'.format(distance_titles[i],row_titles[j]), fontsize = 20)
-        plt.xticks([], [])
-        plt.yticks([], [])
-
-cbar_ax = fig.add_axes([0.95, 0.25, 0.02, 0.5])
-cbar = plt.colorbar(cax = cbar_ax)
-
-plt.savefig(out_pref + '.png', bbox_inches = 'tight')
-plt.clf()
-
-print('Visualization created!')
+print('Output saved!')
