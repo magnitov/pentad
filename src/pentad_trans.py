@@ -1,9 +1,11 @@
 import argparse
 import os
 import h5py
+import json
 import cv2
 import numpy as np
 import pandas as pd
+import multiprocess as mp
 import cooler
 from cooltools import numutils
 from cooltools.expected import trans_expected, blocksum_pairwise
@@ -89,8 +91,7 @@ parser.add_argument('--distance', default = 0.75, type = float, required = False
                     help = 'Maximum distance between two intervals in chromosome fractions')
 parser.add_argument('--excl_chrms', default = 'Y,M,MT', type = str, required = False,
                     help = 'Chromosomes to exclude from analysis')
-parser.add_argument('--multiprocess', default = '', type = str, required = False,
-                    help = 'Usage of multiprocess. Every non-empty string activates its usage')
+
 # Plot
 parser.add_argument('--vmin', default = 0.4, type = float, required = False,
                     help = 'Lower limit for the colormap')
@@ -117,7 +118,6 @@ max_zeros = args.max_zeros
 distance_cutoff = args.distance
 excl_chrms = args.excl_chrms.split(',')
 excl_chrms = excl_chrms + ['chr' + chrm for chrm in excl_chrms]
-mult = args.multiprocess
 
 vmin = args.vmin
 vmax = args.vmax
@@ -143,14 +143,10 @@ resolution = c.info['bin-size']
 supports = [(chrm, 0, chromsizes.loc[chrm,'length']) for chrm in chromosomes]
 balanced_transform = {"balanced": lambda pixels: pixels["count"] * pixels["weight1"] * pixels["weight2"]}
 
-if mult != '':
-    import multiprocess as mp
-    records = blocksum_pairwise(c, supports,
-                                transforms=balanced_transform,
-                                chunksize=resolution,
-                                map=mp.Pool().map)
-else:
-    records = blocksum_pairwise(c, supports, transforms=balanced_transform, chunksize=resolution)
+records = blocksum_pairwise(c, supports,
+                            transforms=balanced_transform,
+                            chunksize=resolution,
+                            map=mp.Pool().map)
 
 trans_records = {
         ( region1[0], region2[0] ): val for ( region1, region2 ), val in records.items()
@@ -211,31 +207,26 @@ for first_idx in range(len(chromosomes)):
             areas_stats[i].append(len(average_compartment[i])-np.sum(areas_stats[i]))
 
 average_compartment = [np.nanmedian(x, axis = 0) for x in average_compartment]
-np.save(out_pref + '.npy', np.array(average_compartment))
 print('Average compartment calculated!')
 print('Total areas piled-up:\n\tA: {}\n\tB: {}\
                             \n\tbetween A and B: {}'.format(np.sum(areas_stats[0]),
                                                             np.sum(areas_stats[1]),
                                                             np.sum(areas_stats[2])))
 
-# Visualize average compartment
+# Save output
+output = {
+    'data' : {},
+    'stats' : {},
+    'type' : 'trans'
+}
+
 subplot_titles = ['A', 'B', 'AB']
-subplot_indexes = [1, 2, 3]
 
-fig = plt.figure(figsize = (12, 4))
-plt.suptitle(title, x = 0.5125, y = 1.02, fontsize = 22)
+for area, stat, title in zip(average_compartment, areas_stats, subplot_titles):
+    output['data'][title] = area.tolist()
+    output['stats'][title] = int(np.sum(stat))
 
-for layout, subtitle, index in zip(average_compartment, subplot_titles, subplot_indexes):
-    plt.subplot(1, 3, index)
-    plt.title(subtitle, fontsize = 15)
-    plt.imshow(layout, cmap = cmap, norm = LogNorm(vmax = vmax, vmin = vmin))
-    plt.xticks([], [])
-    plt.yticks([], [])
+with open(out_pref + '.json', 'w') as w:
+    json.dump(output, w)
 
-cbar_ax = fig.add_axes([0.95, 0.15, 0.02, 0.7])
-cbar = plt.colorbar(cax = cbar_ax)
-
-plt.savefig(out_pref + '.png', bbox_inches = 'tight')
-plt.clf()
-
-print('Visualization created!')
+print('Output saved!')

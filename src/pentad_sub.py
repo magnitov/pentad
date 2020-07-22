@@ -1,7 +1,6 @@
 import argparse
 import os
 import h5py
-import json
 import cv2
 import numpy as np
 import pandas as pd
@@ -21,11 +20,11 @@ def open_eigenvector(bedgraph_file, chromosome):
     signal = pd.read_csv(bedgraph_file, header = None, sep = '\t')
     return(list(signal[signal[0] == chromosome][3].values))
 
-def get_compartment_bins(eigenvector):
-    compartment_A = [ind for (ind, eig) in zip(np.arange(len(eigenvector)), eigenvector) if eig > 0]
-    compartment_B = [ind for (ind, eig) in zip(np.arange(len(eigenvector)), eigenvector) if eig < 0]
-    zero_bins = [ind for (ind, eig) in zip(np.arange(len(eigenvector)), eigenvector) if eig == 0]
-    return(compartment_A, compartment_B, zero_bins)
+def get_subcompartment_bins(eigenvector, subs):
+    compartment = {}
+    for sub in subs:
+        compartment[sub] = [ind for (ind, eig) in zip(np.arange(len(eigenvector)), eigenvector) if eig == sub]
+    return(compartment)
 
 def calculate_intervals_from_range(list_range):
     list_range = list(list_range)
@@ -52,14 +51,20 @@ def resize_area(img, bin_size):
     img_resized = img_resized / 255 * max(img.ravel())
     return(img_resized)
 
-def get_area_type(interval_1, interval_2, intervals_A, intervals_B):
-    if (interval_1 in intervals_A and interval_2 in intervals_B) or\
-       (interval_1 in intervals_B and interval_2 in intervals_A):
-        return('AB')
-    elif (interval_1 in intervals_A and interval_2 in intervals_A):
-        return('A')
-    elif (interval_1 in intervals_B and interval_2 in intervals_B):
-        return('B')
+def get_area_type(interval_1, interval_2, comp_intervals, subs):
+    type_of_area = []
+    for sub1 in subs:
+        if interval_1 in comp_intervals[sub1]:
+            type_of_area.append(sub1)
+            for sub2 in subs:
+                if interval_2 in comp_intervals[sub2]:
+                    type_of_area.append(sub2)
+
+    type_of_area.sort()
+    if type_of_area[0] == type_of_area[1]:
+        return(type_of_area[0])
+    else:
+        return(f'{type_of_area[0]}-{type_of_area[1]}')
 
 def area_dimensions_are_large_enough(img, min_dimension):
     return(len(img) >= min_dimension and len(img[0]) >= min_dimension)
@@ -138,19 +143,26 @@ c = cooler.Cooler(cool_file)
 chromosomes = c.chroms()[:]['name'].values
 chromosomes = [chrm for chrm in chromosomes if chrm not in excl_chrms]
 resolution = c.info['bin-size']
+subs = ['A1', 'A2', 'B1', 'B2', 'B3']
+
+# Make list of subplot titles
+subplot_titles = [f'{sub} short' for sub in subs]
+subplot_titles += [f'{sub} long' for sub in subs]
+for i in range(0, 5):
+    for j in range(i+1,5):
+        subplot_titles.append(f'{subs[i]}-{subs[j]}')
 
 # Calculate average compartment
-average_compartment = [[], [], [], [], []]
-areas_stats = [[0], [0], [0], [0], [0]]
+average_compartment = { i : [] for i in subplot_titles}
+areas_stats = { i : [0] for i in subplot_titles}
 for chromosome in chromosomes:
     print('Chromosome {}...'.format(chromosome))
 
     eigenvector = open_eigenvector(comp_signal, chromosome)
-    comp_A_index, comp_B_index, zero_bins = get_compartment_bins(eigenvector)
-    intervals_A, intervals_B, intervals_zero = get_compartment_intervals(comp_A_index,
-                                                                         comp_B_index,
-                                                                         zero_bins)
-    all_intervals = np.sort(intervals_A + intervals_B + intervals_zero)
+    comp_index = get_subcompartment_bins(eigenvector, subs)
+    comp_intervals = { sub : calculate_intervals_from_range(comp_index[sub]) for sub in subs}
+    all_intervals = np.concatenate(tuple([comp_intervals[sub] for sub in subs]))
+    all_intervals.sort()
 
     matrix = c.matrix(balance = True, sparse = True).fetch(chromosome).toarray()
     matrix = np.nan_to_num(matrix)
@@ -169,49 +181,57 @@ for chromosome in chromosomes:
                 area_type = get_area_type(all_intervals[i], all_intervals[j],
                                           intervals_A, intervals_B)
 
-                if area_is_at_diagonal(i, j):
-                    if area_type == 'A':
-                        average_compartment[0].append(area_resized)
-                    elif area_type == 'B':
-                        average_compartment[1].append(area_resized)
+                if len(area_type) == 2:
+                    if area_is_at_diagonal(i, j):
+                        average_compartment[f'{area_type} short'].append(area_resized)
+                    else:
+                        average_compartment[f'{area_type} long'].append(area_resized)
                 else:
-                    if area_type == 'A':
-                        average_compartment[2].append(area_resized)
-                    elif area_type == 'B':
-                        average_compartment[3].append(area_resized)
-                    elif area_type == 'AB':
-                        average_compartment[4].append(area_resized)
+                    average_compartment[area_type].append(area_resized)
 
-    for i in range(0, 5):
+
+    for i in subplot_titles:
         areas_stats[i].append(len(average_compartment[i])-np.sum(areas_stats[i]))
 
 
-average_compartment = [np.nanmedian(x, axis = 0) for x in average_compartment]
+average_compartment = { x: np.nanmedian(average_compartment[x], axis = 0) for x in average_compartment.keys()}
+
 print('Average compartment calculated!')
-print('Total areas piled-up:\n\tshort-range A: {}\n\tshort-range B: {}\
-                            \n\tlong-range A: {}\n\tlong-range B: {}\
-                            \n\tbetween A and B: {}'.format(np.sum(areas_stats[0]),
-                                                            np.sum(areas_stats[1]),
-                                                            np.sum(areas_stats[2]),
-                                                            np.sum(areas_stats[3]),
-                                                            np.sum(areas_stats[4])))
+print('Total areas calculated:')
+for i in range(5):
+    print(f'\t{subplot_titles[i]}: {np.sum(areas_stats[subplot_titles[i]])}\
+          \t{subplot_titles[i+5]}: {np.sum(areas_stats[subplot_titles[i+5]])}')
+for sbplt in subplot_titles[10:]:
+    print(f'\t{sbplt}: {np.sum(areas_stats[sbplt])}')
 
-# Save output
-output = {
-    'data' : {},
-    'stats' : {},
-    'type' : 'cis'
-}
+# Visualize average compartment
+fig = plt.figure(figsize = ( 20, 24 ))
+plt.suptitle(title, x = 0.5125, y = 0.925, fontsize = 22)
+for i in range(5):
+    plt.subplot(6,5,i+1)
+    plt.imshow(average_compartment[subplot_titles[i]], cmap = cmap, norm = LogNorm(vmax = vmax, vmin = vmin))
+    plt.title(subplot_titles[i], fontsize = 20)
+    plt.xticks([], [])
+    plt.yticks([], [])
 
-subplot_titles = ['Short-range A', 'Short-range B',
-                  'Long-range A', 'Long-range B',
-                  'Between A and B']
+    plt.subplot(6,5,i+6)
+    plt.imshow(average_compartment[subplot_titles[i+5]], cmap = cmap, norm = LogNorm(vmax = vmax, vmin = vmin))
+    plt.title(subplot_titles[i+5], fontsize = 20)
+    plt.xticks([], [])
+    plt.yticks([], [])
 
-for area, stat, title in zip(average_compartment, areas_stats, subplot_titles):
-    output['data'][title] = area.tolist()
-    output['stats'][title] = int(np.sum(stat))
+indices = [12, 13, 14, 15, 18, 19, 20, 24, 25, 30]
+for i in range(10):
+    plt.subplot(6,5,indices[i])
+    plt.imshow(average_compartment[subplot_titles[i+10]], cmap = cmap, norm = LogNorm(vmax = vmax, vmin = vmin))
+    plt.title(subplot_titles[i+10], fontsize = 20)
+    plt.xticks([], [])
+    plt.yticks([], [])
 
-with open(out_pref + '.json', 'w') as w:
-    json.dump(output, w)
+cbar_ax = fig.add_axes([0.95, 0.25, 0.02, 0.5])
+cbar = plt.colorbar(cax = cbar_ax)
 
-print('Output saved!')
+plt.savefig(out_pref + '.png', bbox_inches = 'tight')
+plt.clf()
+
+print('Visualization created!')

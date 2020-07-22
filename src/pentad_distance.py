@@ -70,6 +70,14 @@ def area_has_enough_data(img, max_zeros_fraction):
 def area_is_close_enough(intervals_1, intervals_2, matrix_size, cutoff):
     return(np.mean(intervals_2) < np.mean(intervals_1) + cutoff * matrix_size)
 
+
+def get_distance_index(intervals_1, intervals_2, distance_intervals, resolution):
+    index = 0
+    distance = (np.mean(intervals_2) - np.mean(intervals_1)) * resolution
+    while distance > distance_intervals[index % len(distance_intervals)] and index < len(distance_intervals):
+        index += 1
+    return(index)
+
 def area_is_at_diagonal(i, j):
     return(i == j)
 
@@ -87,10 +95,14 @@ parser.add_argument('--rescale_size', default = 33, type = int, required = False
                     help = 'Size to rescale all areas in average compartment')
 parser.add_argument('--min_dimension', default = 3, type = int, required = False,
                     help = 'Minimum dimension of an area (in genomic bins)')
-parser.add_argument('--max_zeros', default = 0.1, type = float, required = False,
+parser.add_argument('--max_zeros', default = 0.5, type = float, required = False,
                     help = 'Maximum fraction of bins with zero contacts in an area')
-parser.add_argument('--distance', default = 0.75, type = float, required = False,
+parser.add_argument('--cutoff', default = 0.75, type = float, required = False,
                     help = 'Maximum distance between two intervals in chromosome fractions')
+parser.add_argument('--distances', nargs = '+', type = int, required = True,
+                    help = 'Distance boundaries in Mb separated by. For example, 10 100 will give <10 Mb, 10-100 Mb, >100 Mb')
+parser.add_argument('--closed', action = 'store_true', required = False,
+                    help = 'If called closes intervals')
 parser.add_argument('--excl_chrms', default='Y,M,MT', type = str, required = False,
                     help = 'Chromosomes to exclude from analysis')
 # Plot
@@ -116,7 +128,9 @@ comp_signal = args.comp_signal
 rescale_size = args.rescale_size
 min_dimension = args.min_dimension
 max_zeros = args.max_zeros
-distance_cutoff = args.distance
+distance_cutoff = args.cutoff
+distance_intervals = [i*10**6 for i in args.distances]
+closed = args.closed
 excl_chrms = args.excl_chrms.split(',')
 excl_chrms = excl_chrms + ['chr' + chrm for chrm in excl_chrms]
 
@@ -139,9 +153,20 @@ chromosomes = c.chroms()[:]['name'].values
 chromosomes = [chrm for chrm in chromosomes if chrm not in excl_chrms]
 resolution = c.info['bin-size']
 
+# Make distance intervals list
+interval_number = len(distance_intervals) + 1
+distance_titles = []
+distance_titles.append('<{} Mb'.format(distance_intervals[0]/10**6))
+distance_titles.append('>{} Mb'.format(distance_intervals[-1]/10**6))
+
+if interval_number > 2:
+    for i in range(interval_number - 2):
+        distance_titles.insert(i+1,'{}–{} Mb'.format(distance_intervals[i]/10**6,
+                                                     distance_intervals[i+1]/10**6))
+
 # Calculate average compartment
-average_compartment = [[], [], [], [], []]
-areas_stats = [[0], [0], [0], [0], [0]]
+average_compartment = { i: [ [], [], [] ] for i in distance_titles}
+areas_stats = { i: [ [0], [0], [0] ] for i in distance_titles}
 for chromosome in chromosomes:
     print('Chromosome {}...'.format(chromosome))
 
@@ -158,58 +183,54 @@ for chromosome in chromosomes:
 
     for i in range(0, len(all_intervals)):
         for j in range(i, len(all_intervals)):
-            area = get_area_from_matrix(matrix, all_intervals[i], all_intervals[j])
+            if not area_is_at_diagonal(i, j):
+                area = get_area_from_matrix(matrix, all_intervals[i], all_intervals[j])
 
-            if area_dimensions_are_large_enough(area, min_dimension) and\
-                area_has_enough_data(area, max_zeros) and\
-                area_is_close_enough(all_intervals[i], all_intervals[j],
-                                     len(matrix), distance_cutoff):
+                if area_dimensions_are_large_enough(area, min_dimension) and\
+                    area_has_enough_data(area, max_zeros) and\
+                    area_is_close_enough(all_intervals[i], all_intervals[j],
+                                         len(matrix), distance_cutoff):
 
-                area_resized = resize_area(area, rescale_size)
-                area_type = get_area_type(all_intervals[i], all_intervals[j],
-                                          intervals_A, intervals_B)
+                    area_resized = resize_area(area, rescale_size)
+                    area_type = get_area_type(all_intervals[i], all_intervals[j],
+                                              intervals_A, intervals_B)
 
-                if area_is_at_diagonal(i, j):
+                    index = get_distance_index(all_intervals[i], all_intervals[j], distance_intervals, resolution)
+
                     if area_type == 'A':
-                        average_compartment[0].append(area_resized)
+                        average_compartment[distance_titles[index]][0].append(area_resized)
                     elif area_type == 'B':
-                        average_compartment[1].append(area_resized)
-                else:
-                    if area_type == 'A':
-                        average_compartment[2].append(area_resized)
-                    elif area_type == 'B':
-                        average_compartment[3].append(area_resized)
+                        average_compartment[distance_titles[index]][1].append(area_resized)
                     elif area_type == 'AB':
-                        average_compartment[4].append(area_resized)
+                        average_compartment[distance_titles[index]][2].append(area_resized)
 
-    for i in range(0, 5):
-        areas_stats[i].append(len(average_compartment[i])-np.sum(areas_stats[i]))
+    for i in distance_titles:
+        for j in range(3):
+            areas_stats[i][j].append(len(average_compartment[i][j])-np.sum(areas_stats[i][j]))
 
+for i in distance_titles:
+    average_compartment[i] = [np.nanmedian(x, axis = 0) for x in average_compartment[i]]
 
-average_compartment = [np.nanmedian(x, axis = 0) for x in average_compartment]
 print('Average compartment calculated!')
-print('Total areas piled-up:\n\tshort-range A: {}\n\tshort-range B: {}\
-                            \n\tlong-range A: {}\n\tlong-range B: {}\
-                            \n\tbetween A and B: {}'.format(np.sum(areas_stats[0]),
-                                                            np.sum(areas_stats[1]),
-                                                            np.sum(areas_stats[2]),
-                                                            np.sum(areas_stats[3]),
-                                                            np.sum(areas_stats[4])))
+print('Total areas piled-up:')
+for dist_title in distance_titles:
+    print('\t{}:\n\t\tA: {}\n\t\tB: {}\
+                         \n\t\tAB: {}\n'.format(dist_title,
+                                              np.sum(areas_stats[dist_title][0]),
+                                              np.sum(areas_stats[dist_title][1]),
+                                              np.sum(areas_stats[dist_title][2])))
 
 # Save output
 output = {
     'data' : {},
     'stats' : {},
-    'type' : 'cis'
+    'type' : 'dist'
 }
 
-subplot_titles = ['Short-range A', 'Short-range B',
-                  'Long-range A', 'Long-range B',
-                  'Between A and B']
-
-for area, stat, title in zip(average_compartment, areas_stats, subplot_titles):
-    output['data'][title] = area.tolist()
-    output['stats'][title] = int(np.sum(stat))
+row_titles = ['A', 'B', 'AB']
+for title in distance_titles:
+    output['data'][title] = { row : average_compartment[title][i].tolist() for row, i in zip(row_titles, range(3)) }
+    output['stats'][title] = { row : int(np.sum(areas_stats[title][i])) for row, i in zip(row_titles, range(3)) }
 
 with open(out_pref + '.json', 'w') as w:
     json.dump(output, w)
