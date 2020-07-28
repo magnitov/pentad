@@ -93,15 +93,6 @@ parser.add_argument('--distance', default = 0.75, type = float, required = False
                     help = 'Maximum distance between two intervals in chromosome fractions')
 parser.add_argument('--excl_chrms', default='Y,M,MT', type = str, required = False,
                     help = 'Chromosomes to exclude from analysis')
-# Plot
-parser.add_argument('--vmin', default = 0.5, type = float, required = False,
-                    help = 'Lower limit for the colormap')
-parser.add_argument('--vmax', default = 2, type = float, required = False,
-                    help = 'Upper limit for the colormap')
-parser.add_argument('--cmap', default = 'coolwarm', type = str, required = False,
-                    help = 'Colormap to use for the visualization')
-parser.add_argument('--title', default = '', type = str, required = False,
-                    help = 'Suptitle to use for the visualization')
 # Output
 parser.add_argument('--out_pref', default = 'pentad', type = str, required = False,
                     help='Prefix for the output files')
