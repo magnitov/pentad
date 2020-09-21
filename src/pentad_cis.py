@@ -87,7 +87,7 @@ parser.add_argument('--rescale_size', default = 33, type = int, required = False
                     help = 'Size to rescale all areas in average compartment')
 parser.add_argument('--min_dimension', default = 3, type = int, required = False,
                     help = 'Minimum dimension of an area (in genomic bins)')
-parser.add_argument('--max_zeros', default = 0.1, type = float, required = False,
+parser.add_argument('--max_zeros', default = 0.5, type = float, required = False,
                     help = 'Maximum fraction of bins with zero contacts in an area')
 parser.add_argument('--cutoff', default = 0.75, type = float, required = False,
                     help = 'Maximum distance between two intervals in chromosome fractions')
