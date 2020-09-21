@@ -19,9 +19,9 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # Compartment signal processing
-def open_eigenvector(bedgraph_file, chromosome):
-    signal = pd.read_csv(bedgraph_file, header = None, sep = '\t')
-    return(list(signal[signal[0] == chromosome][3].values))
+def open_eigenvector(bedgraph_file, chromosome, column):
+    signal = pd.read_csv(bedgraph_file, header = 0, sep = '\t')
+    return(list(signal[signal[0] == chromosome][column].values))
 
 def get_compartment_bins(eigenvector):
     compartment_A = [ind for (ind, eig) in zip(np.arange(len(eigenvector)), eigenvector) if eig > 0]
@@ -79,7 +79,7 @@ parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFo
 parser.add_argument('cool_file', type = str,
                     help = 'Path to the cool file with Hi-C matrix')
 parser.add_argument('comp_signal', type = str,
-                    help = 'Path to the bedGraph file with compartment signal')
+                    help = 'Path to the bedGraph file with compartment signal. Use the ‘::’ syntax to specify a column name'')
 # Extra control parameters
 parser.add_argument('--rescale_size', default = 33, type = int, required = False,
                     help = 'Size to rescale all areas in average compartment')
@@ -87,8 +87,6 @@ parser.add_argument('--min_dimension', default = 3, type = int, required = False
                     help = 'Minimum dimension of an area (in genomic bins)')
 parser.add_argument('--max_zeros', default = 0.1, type = float, required = False,
                     help = 'Maximum fraction of bins with zero contacts in an area')
-parser.add_argument('--distance', default = 0.75, type = float, required = False,
-                    help = 'Maximum distance between two intervals in chromosome fractions')
 parser.add_argument('--excl_chrms', default = 'Y,M,MT', type = str, required = False,
                     help = 'Chromosomes to exclude from analysis')
 # Output
@@ -157,7 +155,7 @@ intervals_B = {}
 intervals_zero = {}
 all_intervals = {}
 for chrm in chromosomes:
-    eigenvectors[chrm] = open_eigenvector(comp_signal, chrm)
+    eigenvectors[chrm] = open_eigenvector(comp_signal[0], chromosome, comp_signal[1])
     comp_A_index, comp_B_index, zero_bins = get_compartment_bins(eigenvectors[chrm])
     intervals_A[chrm], intervals_B[chrm], intervals_zero[chrm] = get_compartment_intervals(comp_A_index,
                                                                                            comp_B_index,
