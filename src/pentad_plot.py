@@ -33,6 +33,8 @@ parser.add_argument('--closed', action = 'store_true', required = False,
 # Output
 parser.add_argument('--out_pref', default = 'pentad', type = str, required = False,
                     help='Prefix for the output files')
+parser.add_argument('--format', default = 'png', type = str, required = False,
+                    help='Output files format')
 
 args = parser.parse_args()
 
@@ -46,6 +48,7 @@ title = args.title
 closed = args.closed
 
 out_pref = args.out_pref
+format = args.format
 
 # Read file
 with open(average_compartment_path, 'r') as f:
@@ -73,7 +76,7 @@ if data_type == 'cis':
     cbar_ax = fig.add_axes([0.95, 0.25, 0.02, 0.5])
     cbar = plt.colorbar(cax = cbar_ax)
 
-    plt.savefig(out_pref + '.png', bbox_inches = 'tight')
+    plt.savefig(out_pref + '.' + format, bbox_inches = 'tight')
     plt.clf()
 
     print('Visualization created!')
@@ -95,7 +98,7 @@ elif data_type == 'trans':
     cbar_ax = fig.add_axes([0.95, 0.15, 0.02, 0.7])
     cbar = plt.colorbar(cax = cbar_ax)
 
-    plt.savefig(out_pref + '.png', bbox_inches = 'tight')
+    plt.savefig(out_pref + '.' + format, bbox_inches = 'tight')
     plt.clf()
 
     print('Visualization created!')
@@ -123,7 +126,7 @@ elif data_type == 'dist':
     cbar_ax = fig.add_axes([0.95, 0.25, 0.02, 0.5])
     cbar = plt.colorbar(cax = cbar_ax)
 
-    plt.savefig(out_pref + '.png', bbox_inches = 'tight')
+    plt.savefig(out_pref + '.' + format, bbox_inches = 'tight')
     plt.clf()
 
     print('Visualization created!')

@@ -17,9 +17,13 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # Compartment signal processing
-def open_eigenvector(bedgraph_file, chromosome):
-    signal = pd.read_csv(bedgraph_file, header = None, sep = '\t')
-    return(list(signal[signal[0] == chromosome][3].values))
+def open_eigenvector(bedgraph_file, chromosome, column=None):
+    if column == None:
+        signal = pd.read_csv(bedgraph_file, header = None, sep = '\t')
+        return(list(signal[signal[0] == chromosome][3].values))
+    else:
+        signal = pd.read_csv(bedgraph_file, header = 0, sep = '\t')
+        return(list(signal[signal[0] == chromosome][column].values))
 
 def get_compartment_bins(eigenvector):
     compartment_A = [ind for (ind, eig) in zip(np.arange(len(eigenvector)), eigenvector) if eig > 0]
@@ -89,7 +93,7 @@ parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFo
 parser.add_argument('cool_file', type = str,
                     help = 'Path to the cool file with Hi-C matrix')
 parser.add_argument('comp_signal', type = str,
-                    help = 'Path to the bedGraph file with compartment signal')
+                    help = 'Path to the bedGraph file with compartment signal. Use the \‘::\’ syntax to specify a column name')
 # Extra control parameters
 parser.add_argument('--rescale_size', default = 33, type = int, required = False,
                     help = 'Size to rescale all areas in average compartment')
@@ -101,19 +105,8 @@ parser.add_argument('--cutoff', default = 0.75, type = float, required = False,
                     help = 'Maximum distance between two intervals in chromosome fractions')
 parser.add_argument('--distances', nargs = '+', type = int, required = True,
                     help = 'Distance boundaries in Mb separated by. For example, 10 100 will give <10 Mb, 10-100 Mb, >100 Mb')
-parser.add_argument('--closed', action = 'store_true', required = False,
-                    help = 'If called closes intervals')
 parser.add_argument('--excl_chrms', default='Y,M,MT', type = str, required = False,
                     help = 'Chromosomes to exclude from analysis')
-# Plot
-parser.add_argument('--vmin', default = 0.5, type = float, required = False,
-                    help = 'Lower limit for the colormap')
-parser.add_argument('--vmax', default = 2, type = float, required = False,
-                    help = 'Upper limit for the colormap')
-parser.add_argument('--cmap', default = 'coolwarm', type = str, required = False,
-                    help = 'Colormap to use for the visualization')
-parser.add_argument('--title', default = '', type = str, required = False,
-                    help = 'Suptitle to use for the visualization')
 # Output
 parser.add_argument('--out_pref', default = 'pentad', type = str, required = False,
                     help='Prefix for the output files')
@@ -123,21 +116,20 @@ args = parser.parse_args()
 
 # Parse arguments
 cool_file = args.cool_file
-comp_signal = args.comp_signal
+comp_signal = args.comp_signal.split('::')
+if len(comp_signal) == 2:
+    column = comp_signal[1]
+else:
+    column = None
+comp_signal = comp_signal[0]
 
 rescale_size = args.rescale_size
 min_dimension = args.min_dimension
 max_zeros = args.max_zeros
 distance_cutoff = args.cutoff
 distance_intervals = [i*10**6 for i in args.distances]
-closed = args.closed
 excl_chrms = args.excl_chrms.split(',')
 excl_chrms = excl_chrms + ['chr' + chrm for chrm in excl_chrms]
-
-vmin = args.vmin
-vmax = args.vmax
-cmap = args.cmap
-title = args.title
 
 out_pref = args.out_pref
 
@@ -161,7 +153,7 @@ distance_titles.append('>{} Mb'.format(distance_intervals[-1]/10**6))
 
 if interval_number > 2:
     for i in range(interval_number - 2):
-        distance_titles.insert(i+1,'{}–{} Mb'.format(distance_intervals[i]/10**6,
+        distance_titles.insert(i+1,'{}-{} Mb'.format(distance_intervals[i]/10**6,
                                                      distance_intervals[i+1]/10**6))
 
 # Calculate average compartment
@@ -170,7 +162,7 @@ areas_stats = { i: [ [0], [0], [0] ] for i in distance_titles}
 for chromosome in chromosomes:
     print('Chromosome {}...'.format(chromosome))
 
-    eigenvector = open_eigenvector(comp_signal, chromosome)
+    eigenvector = open_eigenvector(comp_signal, chromosome, column)
     comp_A_index, comp_B_index, zero_bins = get_compartment_bins(eigenvector)
     intervals_A, intervals_B, intervals_zero = get_compartment_intervals(comp_A_index,
                                                                          comp_B_index,
