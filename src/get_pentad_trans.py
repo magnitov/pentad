@@ -1,6 +1,5 @@
 import argparse
 import os
-import h5py
 import json
 import cv2
 import numpy as np
@@ -9,31 +8,64 @@ import multiprocess as mp
 import cooler
 from cooltools import numutils
 from cooltools.expected import trans_expected, blocksum_pairwise
-import matplotlib
-import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
-matplotlib.use('Agg')
-import seaborn as sns
-sns.set_context('poster')
 import warnings
 warnings.filterwarnings('ignore')
 
-# Compartment signal processing
-def open_eigenvector(bedgraph_file, chromosome, column=None):
+#############################################
+# Compartment signal processing functions
+#############################################
+
+def open_eigenvector(bedgraph_file, chromosome, column = None):
+    """
+    Get an eigenvector for specific chromosome from a BED-like file.
+
+    Parameters:
+    bedgraph_file -- BED-like file from cooltools call-compartments function with eigenvectors.
+    chromosome -- Name of a chromosome for which eigenvector should be extracted.
+    column -- Name of a column in bedgraph file that contains eigenvector values.
+
+    Output:
+    A list with eigenvector corresponding to specified chromosome.
+    """
+
     if column == None:
         signal = pd.read_csv(bedgraph_file, header = None, sep = '\t')
-        return(list(signal[signal[0] == chromosome][3].values))
+        return(list(signal[signal['chrom'] == chromosome][3].values))
     else:
         signal = pd.read_csv(bedgraph_file, header = 0, sep = '\t')
-        return(list(signal[signal[0] == chromosome][column].values))
+        return(list(signal[signal['chrom'] == chromosome][column].values))
+
+#############################################
 
 def get_compartment_bins(eigenvector):
+    """
+    Get indexes of compartments A/B and NaN (zero) bins from eigenvector.
+
+    Parameters:
+    eigenvector -- A list with eigenvector values for specific chromosome.
+
+    Output:
+    Three lists with indexes of compartment A/B and zeros bins.
+    """
+
     compartment_A = [ind for (ind, eig) in zip(np.arange(len(eigenvector)), eigenvector) if eig > 0]
     compartment_B = [ind for (ind, eig) in zip(np.arange(len(eigenvector)), eigenvector) if eig < 0]
     zero_bins = [ind for (ind, eig) in zip(np.arange(len(eigenvector)), eigenvector) if eig == 0]
     return(compartment_A, compartment_B, zero_bins)
 
+#############################################
+
 def calculate_intervals_from_range(list_range):
+    """
+    Merge a list of continuous indexes into list of intervals.
+
+    Parameters:
+    list_range -- A list with compartment indexes to be merged into intervals.
+
+    Output:
+    A list of lists with intervals.
+    """
+
     list_range = list(list_range)
     intervals = []
     for idx, item in enumerate(list_range):
@@ -43,24 +75,83 @@ def calculate_intervals_from_range(list_range):
             intervals[-1].append(item)
     return(intervals)
 
+#############################################
+
 def get_compartment_intervals(compartment_A, compartment_B, zero_bins):
+    """
+    Apply intervals merging to compartment A/B and zeros bins.
+
+    Parameters:
+    compartment_A -- indexes of eigenvector corresponding to compartment A bins.
+    compartment_B -- indexes of eigenvector corresponding to compartment B bins.
+    zero_bins -- indexes of eigenvector corresponding to zero bins.
+
+    Output:
+    Intervals of compartment A/B and zeros bins.
+    """
+
     intervals_A = calculate_intervals_from_range(compartment_A)
     intervals_B = calculate_intervals_from_range(compartment_B)
     intervals_zero = calculate_intervals_from_range(zero_bins)
     return(intervals_A, intervals_B, intervals_zero)
 
-# Hi-C map areas processing
+#############################################
+# Hi-C map areas processing functions
+#############################################
+
 def get_area_from_matrix(matrix, intervals_list_1, intervals_list_2):
+    """
+    Extract an area from Hi-C map that lies at the intersection of two intervals.
+
+    Parameters:
+    matrix -- Full Hi-C map of a chromosome.
+    intervals_list_1 -- First interval for extraction.
+    intervals_list_2 -- Second interval for extraction.
+
+    Output:
+    Extracted Hi-C map area.
+    """
+
     return(matrix[np.ix_(intervals_list_1, intervals_list_2)])
 
+#############################################
+
 def resize_area(img, bin_size):
+    """
+    Rescale Hi-C map area to a square with defined edge size.
+
+    Parameters:
+    img -- Hi-C map area extracted.
+    bin_size -- Rescaling sequare size in bins.
+
+    Output:
+    Rescaled Hi-C map area.
+    """
+
     img_resized = cv2.resize(img * 255 / max(img.ravel()), (bin_size, bin_size))
     img_resized = img_resized / 255 * max(img.ravel())
     return(img_resized)
 
+#############################################
+
 def get_area_type(interval_1, interval_2,
                   intervals_A1, intervals_B1,
                   intervals_A2, intervals_B2):
+    """
+    Find what type of area was extracted from the Hi-C map.
+
+    Parameters:
+    interval_1 -- First interval used for extraction.
+    interval_2 -- Second interval used for extraction.
+    intervals_A1 -- List of compartment A intervals from first chromosome.
+    intervals_B1 -- List of compartment B intervals from first chromosome.
+    intervals_A2 -- List of compartment A intervals from second chromosome.
+    intervals_B2 -- List of compartment B intervals from second chromosome.
+
+    Output:
+    Area type.
+    """
+
     if (interval_1 in intervals_A1 and interval_2 in intervals_B2) or\
        (interval_1 in intervals_B1 and interval_2 in intervals_A2):
         return('AB')
@@ -69,22 +160,48 @@ def get_area_type(interval_1, interval_2,
     elif (interval_1 in intervals_B1 and interval_2 in intervals_B2):
         return('B')
 
+#############################################
+
 def area_dimensions_are_large_enough(img, min_dimension):
+    """
+    Find whether extracted area is large enough for the analysis.
+
+    Parameters:
+    img -- Hi-C map area extracted.
+    min_dimensions -- Minimum size for area dimensions.
+
+    Output:
+    Whether an area is large enough.
+    """
+
     return(len(img) >= min_dimension and len(img[0]) >= min_dimension)
 
+#############################################
+
 def area_has_enough_data(img, max_zeros_fraction):
+    """
+    Find whether extracted area has enough data for the analysis.
+
+    Parameters:
+    img -- Hi-C map area extracted.
+    max_zeros_fraction -- Maximum fraction of zeros in area.
+
+    Output:
+    Whether an area has enough data.
+    """
+
     return(len(np.where(img.ravel() == 0)[0]) < max_zeros_fraction * len(img.ravel()))
 
+#############################################
+# Parse arguments
+#############################################
 
-# PARSING ARGUMENTS
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-# Main arguments
 parser.add_argument('cool_file', type = str,
                     help = 'Path to the cool file with Hi-C matrix')
 parser.add_argument('comp_signal', type = str,
                     help = 'Path to the bedGraph file with compartment signal. Use the \‘::\’ syntax to specify a column name')
-# Extra control parameters
 parser.add_argument('--rescale_size', default = 33, type = int, required = False,
                     help = 'Size to rescale all areas in average compartment')
 parser.add_argument('--min_dimension', default = 3, type = int, required = False,
@@ -93,14 +210,11 @@ parser.add_argument('--max_zeros', default = 0.1, type = float, required = False
                     help = 'Maximum fraction of bins with zero contacts in an area')
 parser.add_argument('--excl_chrms', default = 'Y,M,MT', type = str, required = False,
                     help = 'Chromosomes to exclude from analysis')
-# Output
 parser.add_argument('--out_pref', default = 'pentad_trans', type = str, required = False,
                     help='Prefix for the output files')
 
 args = parser.parse_args()
 
-
-# Parse arguments
 cool_file = args.cool_file
 comp_signal = args.comp_signal.split('::')
 if len(comp_signal) == 2:
@@ -114,23 +228,29 @@ min_dimension = args.min_dimension
 max_zeros = args.max_zeros
 excl_chrms = args.excl_chrms.split(',')
 excl_chrms = excl_chrms + ['chr' + chrm for chrm in excl_chrms]
-
 out_pref = args.out_pref
 
-# Check that cool and bedGraph files exist
+print('Running trans pentad calculation for {} with {}'.format(cool_file, comp_signal))
+
+#############################################
+# Read files
+#############################################
+
 if not os.path.isfile(cool_file):
     raise FileExistsError("cool file with Hi-C matrix doesn't exist")
 if not os.path.isfile(comp_signal):
     raise FileExistsError("bedGraph file with compartment signal doesn't exist")
 
-# Read Hi-C matrix
 c = cooler.Cooler(cool_file)
 chromosomes = c.chroms()[:]['name'].values
 chromosomes = [chrm for chrm in chromosomes if chrm not in excl_chrms]
 chromsizes = c.chroms()[:][c.chroms()[:]['name'].map(lambda x: x in chromosomes)].set_index('name')
 resolution = c.info['bin-size']
 
-# Calculate expected values
+#############################################
+# Prepare trans expected values
+#############################################
+
 supports = [(chrm, 0, chromsizes.loc[chrm,'length']) for chrm in chromosomes]
 balanced_transform = {"balanced": lambda pixels: pixels["count"] * pixels["weight1"] * pixels["weight2"]}
 
@@ -144,11 +264,15 @@ trans_records = {
         }
 
 trans_df = pd.DataFrame.from_dict( trans_records, orient="index" )
-trans_df.index.rename( ["chrom1","chrom2"], inplace=True )
+trans_df.index.rename( ["chrom1", "chrom2"], inplace=True )
 trans_df["balanced.avg"] = trans_df["balanced.sum"] / trans_df["n_valid"]
-print('Trans-expected values calculated')
+print('Trans-expected values calculated!')
 
+#############################################
 # Calculate average compartment
+#############################################
+
+print('Processing trans data...')
 average_compartment = [ [], [], [] ]
 areas_stats = [ [0], [0], [0] ]
 
@@ -167,7 +291,7 @@ for chrm in chromosomes:
 
 for first_idx in range(len(chromosomes)):
 
-    print('Chromosome {}... '.format(chromosomes[first_idx]))
+    print('\tChromosome {} trans pairs... '.format(chromosomes[first_idx]))
 
     for second_idx in range(first_idx+1, len(chromosomes)):
 
@@ -198,13 +322,12 @@ for first_idx in range(len(chromosomes)):
             areas_stats[i].append(len(average_compartment[i])-np.sum(areas_stats[i]))
 
 average_compartment = [np.nanmedian(x, axis = 0) for x in average_compartment]
-print('Average compartment calculated!')
-print('Total areas piled-up:\n\tA: {}\n\tB: {}\
-                            \n\tbetween A and B: {}'.format(np.sum(areas_stats[0]),
-                                                            np.sum(areas_stats[1]),
-                                                            np.sum(areas_stats[2])))
+print('Average compartment in trans calculated!')
 
+#############################################
 # Save output
+#############################################
+
 output = {
     'data' : {},
     'stats' : {},
