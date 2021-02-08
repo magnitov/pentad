@@ -16,12 +16,12 @@ warnings.filterwarnings('ignore')
 def open_eigenvector(bedgraph_file, chromosome, column = None):
     """
     Get an eigenvector for specific chromosome from a BED-like file.
-    
+
     Parameters:
     bedgraph_file -- BED-like file from cooltools call-compartments function with eigenvectors.
     chromosome -- Name of a chromosome for which eigenvector should be extracted.
     column -- Name of a column in bedgraph file that contains eigenvector values.
-    
+
     Output:
     A list with eigenvector corresponding to specified chromosome.
     """
@@ -246,6 +246,10 @@ parser.add_argument('--out_pref', default = 'pentad', type = str, required = Fal
 args = parser.parse_args()
 
 cool_file = args.cool_file
+if '::' in cool_file:
+    cool_file_path = cool_file[:cool_file.find('::')]
+else:
+    cool_file_path = cool_file
 comp_signal = args.comp_signal.split('::')
 if len(comp_signal) == 2:
     column = comp_signal[1]
@@ -267,7 +271,7 @@ print('Running cis pentad calculation for {} with {}'.format(cool_file, comp_sig
 # Read files
 #############################################
 
-if not os.path.isfile(cool_file):
+if not os.path.isfile(cool_file_path):
     raise FileExistsError("cool file with Hi-C matrix doesn't exist")
 if not os.path.isfile(comp_signal):
     raise FileExistsError("bedGraph file with compartment signal doesn't exist")
