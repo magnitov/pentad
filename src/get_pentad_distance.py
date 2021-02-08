@@ -277,6 +277,10 @@ parser.add_argument('--out_pref', default = 'pentad_distance', type = str, requi
 args = parser.parse_args()
 
 cool_file = args.cool_file
+if '::' in cool_file:
+    cool_file_path = cool_file[:cool_file.find('::')]
+else:
+    cool_file_path = cool_file
 comp_signal = args.comp_signal.split('::')
 if len(comp_signal) == 2:
     column = comp_signal[1]
@@ -299,7 +303,7 @@ print('Running cis-by-distance pentad calculation for {} with {}'.format(cool_fi
 # Read files
 #############################################
 
-if not os.path.isfile(cool_file):
+if not os.path.isfile(cool_file_path):
     raise FileExistsError("cool file with Hi-C matrix doesn't exist")
 if not os.path.isfile(comp_signal):
     raise FileExistsError("bedGraph file with compartment signal doesn't exist")
