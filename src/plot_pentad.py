@@ -1,5 +1,6 @@
 import argparse
 import json
+import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
@@ -31,6 +32,8 @@ parser.add_argument('--out_pref', default = 'pentad', type = str, required = Fal
                     help='Prefix for the output files')
 parser.add_argument('--format', default = 'png', type = str, required = False,
                     help='Output files format')
+parser.add_argument('--compare', default = None, type = str, required = False,
+                    help = 'Plots difference ratio of pentads')
 
 args = parser.parse_args()
 
@@ -41,6 +44,7 @@ vmax = args.vmax
 cmap = args.cmap
 title = args.title
 closed = args.closed
+compare_path = args.compare
 
 out_pref = args.out_pref
 format = args.format
@@ -49,11 +53,31 @@ format = args.format
 # Read average compartment data
 #############################################
 
-with open(average_compartment_path, 'r') as f:
-    data = json.load(f)
-    average_compartment = data['data']
-    data_type = data['type']
+if compare_path == None:
+    with open(average_compartment_path, 'r') as f:
+        data = json.load(f)
+        average_compartment = data['data']
+        data_type = data['type']
+else:
+    with open(average_compartment_path, 'r') as f:
+        data = json.load(f)
+        average_compartment_1 = data['data']
+        data_type = data['type']
+    with open(compare_path, 'r') as f:
+        data = json.load(f)
+        average_compartment_2 = data['data']
+        if data_type != data['type']:
+            raise ValueError('uncomparable data')
 
+    if  average_compartment_1.keys() != average_compartment_2.keys():
+        raise ValueError('uncomparable data')
+    if data_type == 'dist':
+        average_compartment = { dist : { area : np.array(average_compartment_1[dist][area])/np.array(average_compartment_2[dist][area])
+                                        for area in ['A', 'B', 'AB']}
+                                        for dist in average_compartment_1}
+    else:
+        average_compartment = {area : np.array(average_compartment_1[area])/np.array(average_compartment_2[area])
+                                        for area in average_compartment_1.keys()}
 #############################################
 # Create plots
 #############################################
