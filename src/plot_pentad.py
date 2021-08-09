@@ -39,6 +39,7 @@ args = parser.parse_args()
 
 average_compartment_path = args.average_compartment_path
 
+fontsize = 24
 vmin = args.vmin
 vmax = args.vmax
 cmap = args.cmap
@@ -89,11 +90,11 @@ if data_type == 'cis':
     subplot_indexes = [4, 8, 6, 2, 5]
 
     fig = plt.figure(figsize = (10, 10))
-    plt.suptitle(title, x = 0.5125, y = 0.98, fontsize = 22)
+    plt.suptitle(title, x = 0.5125, y = 0.98, fontsize = fontsize + 2)
 
     for subtitle, index in zip(subplot_titles, subplot_indexes):
         plt.subplot(3, 3, index)
-        plt.title(subtitle, fontsize = 15)
+        plt.title(subtitle, fontsize = fontsize)
         plt.imshow(average_compartment[subtitle], cmap = cmap, norm = LogNorm(vmax = vmax, vmin = vmin))
         plt.xticks([], [])
         plt.yticks([], [])
@@ -111,11 +112,11 @@ elif data_type == 'trans':
     subplot_indexes = [1, 2, 3]
 
     fig = plt.figure(figsize = (12, 4))
-    plt.suptitle(title, x = 0.5125, y = 1.02, fontsize = 22)
+    plt.suptitle(title, x = 0.5125, y = 1.05, fontsize = fontsize + 2)
 
     for subtitle, index in zip(subplot_titles, subplot_indexes):
         plt.subplot(1, 3, index)
-        plt.title(subtitle, fontsize = 15)
+        plt.title(subtitle, fontsize = fontsize)
         plt.imshow(average_compartment[subtitle], cmap = cmap, norm = LogNorm(vmax = vmax, vmin = vmin))
         plt.xticks([], [])
         plt.yticks([], [])
@@ -138,13 +139,13 @@ elif data_type == 'dist':
         interval_number -= 1 # Be careful if change --closed flag
 
     fig = plt.figure(figsize = ( interval_number * 4, 12 ))
-    plt.suptitle(title, x = 0.5125, y = 0.98, fontsize = 22)
+    plt.suptitle(title, x = 0.5125, y = 0.98, fontsize = fontsize + 2)
 
     for i in range(interval_number):
         for j in range(3):
             plt.subplot(3, interval_number, j*interval_number+i+1)
             plt.imshow(average_compartment[distance_titles[i]][row_titles[j]], cmap = cmap, norm = LogNorm(vmax = vmax, vmin = vmin))
-            plt.title('{} {}'.format(distance_titles[i],row_titles[j]), fontsize = 20)
+            plt.title('{} {}'.format(distance_titles[i],row_titles[j]), fontsize = fontsize)
             plt.xticks([], [])
             plt.yticks([], [])
 
