@@ -34,8 +34,8 @@ def open_eigenvector(bedgraph_file, chromosome, column = None):
     """
 
     if column == None:
-        signal = pd.read_csv(bedgraph_file, header = None, sep = '\t')
-        return(list(signal[signal['chrom'] == chromosome][3].values))
+        signal = pd.read_csv(bedgraph_file, header = None, sep = '\t', names = ['chrom', 'start', 'end', 'PC1'])
+        return(list(signal[signal['chrom'] == chromosome]['PC1'].values))
     else:
         signal = pd.read_csv(bedgraph_file, header = 0, sep = '\t')
         return(list(signal[signal['chrom'] == chromosome][column].values))
