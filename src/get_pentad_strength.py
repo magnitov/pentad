@@ -338,7 +338,7 @@ for chromosome in chromosomes:
 
     average_compartment = [np.nanmedian(x, axis = 0) for x in average_compartment]
     for i in range(0, 5):
-        areas_stats[i].append(len(average_compartment[i]))
+        #areas_stats[i].append(len(average_compartment[i]))
         if i != 4: compartment_strength[i].append(
             np.mean(average_compartment[i]) / np.mean(average_compartment[4])
             )
