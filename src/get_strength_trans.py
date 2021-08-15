@@ -4,8 +4,10 @@ import json
 import cv2
 import numpy as np
 import pandas as pd
+import multiprocess as mp
 import cooler
 from cooltools import numutils
+from cooltools.expected import trans_expected, blocksum_pairwise
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -132,26 +134,30 @@ def resize_area(img, bin_size):
 
 #############################################
 
-def get_area_type(interval_1, interval_2, intervals_A, intervals_B):
+def get_area_type(interval_1, interval_2,
+                  intervals_A1, intervals_B1,
+                  intervals_A2, intervals_B2):
     """
     Find what type of area was extracted from the Hi-C map.
 
     Parameters:
     interval_1 -- First interval used for extraction.
     interval_2 -- Second interval used for extraction.
-    intervals_A -- List of compartment A intervals.
-    intervals_B -- List of compartment B intervals.
+    intervals_A1 -- List of compartment A intervals from first chromosome.
+    intervals_B1 -- List of compartment B intervals from first chromosome.
+    intervals_A2 -- List of compartment A intervals from second chromosome.
+    intervals_B2 -- List of compartment B intervals from second chromosome.
 
     Output:
     Area type.
     """
 
-    if (interval_1 in intervals_A and interval_2 in intervals_B) or\
-       (interval_1 in intervals_B and interval_2 in intervals_A):
+    if (interval_1 in intervals_A1 and interval_2 in intervals_B2) or\
+       (interval_1 in intervals_B1 and interval_2 in intervals_A2):
         return('AB')
-    elif (interval_1 in intervals_A and interval_2 in intervals_A):
+    elif (interval_1 in intervals_A1 and interval_2 in intervals_A2):
         return('A')
-    elif (interval_1 in intervals_B and interval_2 in intervals_B):
+    elif (interval_1 in intervals_B1 and interval_2 in intervals_B2):
         return('B')
 
 #############################################
@@ -187,40 +193,6 @@ def area_has_enough_data(img, max_zeros_fraction):
     return(len(np.where(img.ravel() == 0)[0]) < max_zeros_fraction * len(img.ravel()))
 
 #############################################
-
-def area_is_close_enough(intervals_1, intervals_2, matrix_size, cutoff):
-    """
-    Find whether extracted area has enough data for the analysis.
-
-    Parameters:
-    intervals_1 -- First interval used for extraction.
-    intervals_2 -- Second interval used for extraction.
-    matrix_size -- Size of full Hi-C map of chromosome.
-    cutoff -- Maximum distance between intervals as chromosome size fraction.
-
-    Output:
-    Whether an area is close enough to the diagonal.
-    """
-
-    return(np.mean(intervals_2) < np.mean(intervals_1) + cutoff * matrix_size)
-
-#############################################
-
-def area_is_at_diagonal(i, j):
-    """
-    Find whether extracted area is from the diagonal.
-
-    Parameters:
-    i -- First interval index.
-    j -- Second interval index.
-
-    Output:
-    Whether an area is at the diagonal.
-    """
-
-    return(i == j)
-
-#############################################
 # Parse arguments
 #############################################
 
@@ -234,15 +206,13 @@ parser.add_argument('--rescale_size', default = 33, type = int, required = False
                     help = 'Size to rescale all areas in average compartment')
 parser.add_argument('--min_dimension', default = 3, type = int, required = False,
                     help = 'Minimum dimension of an area (in genomic bins)')
-parser.add_argument('--max_zeros', default = 0.5, type = float, required = False,
+parser.add_argument('--max_zeros', default = 0.1, type = float, required = False,
                     help = 'Maximum fraction of bins with zero contacts in an area')
-parser.add_argument('--cutoff', default = 0.75, type = float, required = False,
-                    help = 'Maximum distance between two intervals in chromosome fractions')
 parser.add_argument('--center_width', default = 0.6, type = float, required = False,
                     help = 'Size of the central fragment for background signal')
-parser.add_argument('--excl_chrms', default='Y,M,MT', type = str, required = False,
+parser.add_argument('--excl_chrms', default = 'Y,M,MT', type = str, required = False,
                     help = 'Chromosomes to exclude from analysis')
-parser.add_argument('--out_pref', default = 'pentad', type = str, required = False,
+parser.add_argument('--out_pref', default = 'pentad_trans', type = str, required = False,
                     help='Prefix for the output files')
 
 args = parser.parse_args()
@@ -262,13 +232,12 @@ comp_signal = comp_signal[0]
 rescale_size = args.rescale_size
 min_dimension = args.min_dimension
 max_zeros = args.max_zeros
-distance_cutoff = args.cutoff
 center_width = args.center_width
 excl_chrms = args.excl_chrms.split(',')
 excl_chrms = excl_chrms + ['chr' + chrm for chrm in excl_chrms]
 out_pref = args.out_pref
 
-print('Running cis pentad calculation for {} with {}'.format(cool_file, comp_signal))
+print('Running trans pentad calculation for {} with {}'.format(cool_file, comp_signal))
 
 #############################################
 # Read files
@@ -282,78 +251,103 @@ if not os.path.isfile(comp_signal):
 c = cooler.Cooler(cool_file)
 chromosomes = c.chroms()[:]['name'].values
 chromosomes = [chrm for chrm in chromosomes if chrm not in excl_chrms]
+chromsizes = c.chroms()[:][c.chroms()[:]['name'].map(lambda x: x in chromosomes)].set_index('name')
 resolution = c.info['bin-size']
+
+#############################################
+# Prepare trans expected values
+#############################################
+
+supports = [(chrm, 0, chromsizes.loc[chrm,'length']) for chrm in chromosomes]
+balanced_transform = {"balanced": lambda pixels: pixels["count"] * pixels["weight1"] * pixels["weight2"]}
+
+records = blocksum_pairwise(c, supports,
+                            transforms=balanced_transform,
+                            chunksize=resolution,
+                            map=mp.Pool().map)
+
+trans_records = {
+        ( region1[0], region2[0] ): val for ( region1, region2 ), val in records.items()
+        }
+
+trans_df = pd.DataFrame.from_dict( trans_records, orient="index" )
+trans_df.index.rename( ["chrom1", "chrom2"], inplace=True )
+trans_df["balanced.avg"] = trans_df["balanced.sum"] / trans_df["n_valid"]
+print('Trans-expected values calculated!')
 
 #############################################
 # Calculate average compartment
 #############################################
 
-print('Processing cis data...')
-areas_stats = [[0], [0], [0], [0], [0]]
-compartment_strength = [[], [], [], []]
-for chromosome in chromosomes:
-    print('\tChromosome {}...'.format(chromosome))
+print('Processing trans data...')
+compartment_strength  = [ [], [] ]
+areas_stats = [ [0], [0], [0] ]
 
-    eigenvector = open_eigenvector(comp_signal, chromosome, column)
-    comp_A_index, comp_B_index, zero_bins = get_compartment_bins(eigenvector)
-    intervals_A, intervals_B, intervals_zero = get_compartment_intervals(comp_A_index,
-                                                                         comp_B_index,
-                                                                         zero_bins)
-    all_intervals = np.sort(intervals_A + intervals_B + intervals_zero)
+eigenvectors = {}
+intervals_A = {}
+intervals_B = {}
+intervals_zero = {}
+all_intervals = {}
+for chrm in chromosomes:
+    eigenvectors[chrm] = open_eigenvector(comp_signal, chrm, column)
+    comp_A_index, comp_B_index, zero_bins = get_compartment_bins(eigenvectors[chrm])
+    intervals_A[chrm], intervals_B[chrm], intervals_zero[chrm] = get_compartment_intervals(comp_A_index,
+                                                                                           comp_B_index,
+                                                                                           zero_bins)
+    all_intervals[chrm] = np.sort(intervals_A[chrm] + intervals_B[chrm] + intervals_zero[chrm])
 
-    matrix = c.matrix(balance = True, sparse = True).fetch(chromosome).toarray()
-    matrix = np.nan_to_num(matrix)
-    matrix, *other = numutils.observed_over_expected(matrix)
+for first_idx in range(len(chromosomes)):
 
-    average_compartment = [[], [], [], [], []]
+    print('\tChromosome {} trans pairs... '.format(chromosomes[first_idx]))
 
-    for i in range(0, len(all_intervals)):
-        for j in range(i, len(all_intervals)):
-            area = get_area_from_matrix(matrix, all_intervals[i], all_intervals[j])
+    for second_idx in range(first_idx+1, len(chromosomes)):
 
-            if area_dimensions_are_large_enough(area, min_dimension) and\
-                area_has_enough_data(area, max_zeros) and\
-                area_is_close_enough(all_intervals[i], all_intervals[j],
-                                     len(matrix), distance_cutoff):
+        matrix = c.matrix(balance = True, sparse = True).fetch(chromosomes[first_idx], chromosomes[second_idx]).toarray()
+        matrix = np.nan_to_num(matrix) / trans_df.loc[chromosomes[first_idx], chromosomes[second_idx]]['balanced.avg']
+        average_compartment = [ [], [], [] ]
+        for i in range(len(all_intervals[chromosomes[first_idx]])):
+            for j in range(len(all_intervals[chromosomes[second_idx]])):
+                area = get_area_from_matrix(matrix,
+                                            all_intervals[chromosomes[first_idx]][i],
+                                            all_intervals[chromosomes[second_idx]][j])
 
-                area_resized = resize_area(area, rescale_size)
-                area_type = get_area_type(all_intervals[i], all_intervals[j],
-                                          intervals_A, intervals_B)
+                if area_dimensions_are_large_enough(area, min_dimension) and\
+                area_has_enough_data(area, max_zeros):
 
-                if area_is_at_diagonal(i, j):
+                    area_resized = resize_area(area, rescale_size)
+                    area_type = get_area_type(all_intervals[chromosomes[first_idx]][i], all_intervals[chromosomes[second_idx]][j],
+                                              intervals_A[chromosomes[first_idx]], intervals_B[chromosomes[first_idx]],
+                                              intervals_A[chromosomes[second_idx]], intervals_B[chromosomes[second_idx]])
                     if area_type == 'A':
                         average_compartment[0].append(area_resized)
                     elif area_type == 'B':
                         average_compartment[1].append(area_resized)
-                else:
-                    if area_type == 'A':
-                        average_compartment[2].append(area_resized)
-                    elif area_type == 'B':
-                        average_compartment[3].append(area_resized)
                     elif area_type == 'AB':
                         x1 = rescale_size * (1 - center_width) / 2
                         x2 = 1 - x1
                         x1, x2 = int(np.round(x1)), int(np.round(x2))
-                        average_compartment[4].append(area_resized[x1:x2, x1:x2])
+                        average_compartment[2].append(area_resized[x1:x2, x1:x2])
+        average_compartment = [np.nanmedian(x, axis = 0) for x in average_compartment]
+        for i in range(3):
+            #areas_stats[i].append(len(average_compartment[i])) Move to right place!
+            if i != 2: compartment_strength[i].append(
+                np.mean(average_compartment[i]) / np.mean(average_compartment[2])
+                )
 
-    average_compartment = [np.nanmedian(x, axis = 0) for x in average_compartment]
-    for i in range(0, 5):
-        #areas_stats[i].append(len(average_compartment[i]))
-        if i != 4: compartment_strength[i].append(
-            np.mean(average_compartment[i]) / np.mean(average_compartment[4])
-            )
-
-
-print('Compartment strength in cis calculated!')
+print('Compartment strength in trans calculated!')
 
 #############################################
 # Save output
 #############################################
 
-strength_titles = ['Short-range A', 'Short-range B',
-                  'Long-range A', 'Long-range B']
+strength_titles = ['A', 'B']
+index = []
+for first_idx in range(len(chromosomes)):
+    for second_idx in range(first_idx+1, len(chromosomes)):
+        index.append('{}-{}'.format(chromosomes[first_idx], chromosomes[second_idx]))
+
 output  = pd.DataFrame(data=np.array(compartment_strength).T,
-                        columns=strength_titles, index=chromosomes)
+                        columns=strength_titles, index=index)
 output.to_csv(out_pref + '.tsv', sep='\t')
 
 print('Output saved!')
