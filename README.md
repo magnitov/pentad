@@ -6,37 +6,37 @@ Understanding the effect of various factors on the 3D genome organization is ess
 
 It is currently implemented in three python scripts for (i) averaging cis interactions, (ii) averaging trans interactions, and (iii) averaging cis interactions with stratification by genomic distance. Here is the diagram illustrating how the average compartment visualization is created:
 
-![Pentads diagram](https://github.com/magnitov/pentads/blob/master/diagram.png)
+![Pentads diagram](https://github.com/magnitov/pentads/blob/development/diagram.png)
 
 This visualization (we named it pentad) is aimed to represent short- and long-range contacts within A and B compartments and contacts between A and B compartments. It consists of several piled-up areas from the observed-over-expected Hi-C matrix that are determined based on the compartment signal provided by the user. The tool can filter the areas based on their dimensions in genomic bins, the amount of zero-contact pixels, and the distance between the bases that form the area. The areas that pass the filters are extracted from the matrix and rescaled using bilinear interpolation. Rescaled areas of the same type are averaged genome-wide and aggregated into one pentad. 
 
 ## Installation
 
-1. Create conda environment with all the dependencies:
-
-```
-conda env create -n pentads-env -f environment.yml 
-conda activate pentads-env
-```
-
-2. Clone the repo to your local machine:
+1. Clone the repo to your local machine:
 
 ```
 git clone https://github.com/magnitov/pentads.git
-```
-
-3. Run scripts on the test dataset (this should take a couple of minutes to complete):
-
-```
 cd ./pentads/
+```
+
+2. Create conda environment with all the dependencies:
+
+```
+conda env create -n pentads-env -f environment.yml
+conda activate pentads-env
+```
+
+3. Run scripts on the sample dataset (this should take about 15 minutes to complete):
+
+```
 bash run_test.sh
 ```
 
 ## Usage
 
-### Calculations
+### Parameters
 
-For calculating the average compartment in any mode you will need two inputs: cool file with Hi-C contact matrix and bedGraph file with compartment signal. The other parameters are optional. Here is the full description of parameters you may find in our scripts:
+Here is the full description of parameters you may find in our scripts:
 
 *  **cool_file**
 
@@ -60,7 +60,7 @@ Maximum fraction of bins with zero contacts in an area. This is used to filter s
 
 * **cutoff**
 
-Maximum distance between two intervals in the chromosome. We find that compartment regions that are located very far from one another don't add up any significant information, therefore we set a cutoff for the distance between them. This is used only for *cis* interactions.
+Maximum distance between two intervals in the chromosome. We find that compartment regions that are located very far from one another don't add up any significant information, therefore we set a cutoff for the distance between them. This is used only for *cis* and *cis* interactions stratified by distance.
 
 * **distances**
 
@@ -73,6 +73,18 @@ Chromosomes to exclude from the analysis. By default, we exclude Y,M, and MT, wh
 * **out_pref**
 
 Prefix for the output files. By default, we save the output to the same directory with prefix *pentad*.
+
+* **center_width**
+
+Fraction of the central fragment of the square that represents intercompartental interactions used for compartment strenght quantification.
+
+* **closed**
+
+For *cis* interactions stratified by distance whether to plot a closed intervals (omitting the last section).
+
+### Average compartment calculation
+
+For calculating the average compartment in any mode you will need two inputs: cool file with Hi-C contact matrix and bedGraph file with compartment signal. The other parameters are optional.
 
 **Average compartment in *cis*:**
 
@@ -112,8 +124,47 @@ We have a separate script for the visualization of the output files. It automati
 ```
 usage: plot_pentad.py [-h] [--vmin VMIN] [--vmax VMAX] [--cmap CMAP]
                       [--title TITLE] [--closed] [--out_pref OUT_PREF]
-                      [--format FORMAT]
+                      [--format FORMAT] [--compare COMPARE]
                       average_compartment_path
+```
+
+### Compartment strength quantification
+
+For calculating the average compartment strength in any mode you will need same parameters and input files as for average compartment calculation.
+
+**Compartment strength in *cis*:**
+
+```
+usage: quant_strength_cis.py [-h] [--rescale_size RESCALE_SIZE]
+                             [--min_dimension MIN_DIMENSION]
+                             [--max_zeros MAX_ZEROS] [--cutoff CUTOFF]
+                             [--center_width CENTER_WIDTH]
+                             [--excl_chrms EXCL_CHRMS] [--out_pref OUT_PREF]
+                             cool_file comp_signal
+```
+
+**Compartment strength in *trans*:**
+
+```
+usage: quant_strength_trans.py [-h] [--rescale_size RESCALE_SIZE]
+                               [--min_dimension MIN_DIMENSION]
+                               [--max_zeros MAX_ZEROS]
+                               [--center_width CENTER_WIDTH]
+                               [--excl_chrms EXCL_CHRMS] [--out_pref OUT_PREF]
+                               cool_file comp_signal
+```
+
+**Compartment strength in *cis* by distance:**
+
+```
+usage: quant_strength_distance.py [-h] [--rescale_size RESCALE_SIZE]
+                                  [--min_dimension MIN_DIMENSION]
+                                  [--max_zeros MAX_ZEROS] [--cutoff CUTOFF]
+                                  --distances DISTANCES [DISTANCES ...]
+                                  [--center_width CENTER_WIDTH]
+                                  [--excl_chrms EXCL_CHRMS]
+                                  [--out_pref OUT_PREF]
+                                  cool_file comp_signal
 ```
 
 ## Citing
@@ -124,4 +175,4 @@ Sergey V. Ulianov, Artem K. Velichko, Mikhail D. Magnitov, Artem V. Luzhin, Arka
 * doi: [10.1101/2020.05.18.101261](https://doi.org/10.1101/2020.05.18.101261)
 
 ## Support
-In case you have any questions or need some advice, please contact us via email: mikhail.magnitov@phystech.edu (Mikhail Magnitov) or azatgk@yandex.ru (Azat Garaev).
+In case you have any questions about the data or need some advice, please contact us via email: mikhail.magnitov@phystech.edu (Mikhail Magnitov) or azatgk@yandex.ru (Azat Garaev).
