@@ -173,8 +173,8 @@ usage: quant_strength_distance.py [-h] [--rescale_size RESCALE_SIZE]
 
 If you find this visualization useful for your research, please cite our paper:
 
-Sergey V. Ulianov, Artem K. Velichko, Mikhail D. Magnitov, Artem V. Luzhin, Arkadiy K. Golov, Natalia Ovsyannikova, Igor I. Kireev, Alexey S. Gavrikov, Alexander S. Mishin, Azat K. Garaev, Alexander V. Tyakht, Alexey A. Gavrilov, Omar L. Kantidze, Sergey V. Razin. **Suppression of liquid-liquid phase separation by 1,6-hexanediol partially compromises the 3D genome organization in living cells.** *Nucleic Acids Research* (2021)
-* doi: [10.1093/nar/gkab249](https://doi.org/10.1093/nar/gkab249)
+Mikhail D. Magnitov, Azat K. Garaev, Alexander V. Tyakht, Sergey V. Ulianov & Sergey V. Razin. **Pentad: a tool for distance-dependent analysis of Hi-C interactions within and between chromatin compartments.** *BMC Bioinformatics* (2022)
+* doi: [10.1186/s12859-022-04654-6](https://doi.org/10.1186/s12859-022-04654-6)
 
 ## Support
-In case you have any questions about the data or need some advice, please contact us via email: mikhail.magnitov@phystech.edu (Mikhail Magnitov) or azatgk@yandex.ru (Azat Garaev).
+In case you have any questions about the data or need some advice, please contact us via email: mikhail.magnitov@gmail.com (Mikhail Magnitov) or azatgk@yandex.ru (Azat Garaev).
