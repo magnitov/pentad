@@ -13,4 +13,4 @@ dependencies:
     - seaborn
     - pip:
         - cooler>=0.8.5
-        - cooltools
+        - cooltools>=0.5.0
