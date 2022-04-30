@@ -31,11 +31,11 @@ done
 for DATASET in Control Hex5 Recovery
 do
 	# Cis
-	python ./src/quant_strength_cis.py Ulianov_et_al_${DATASET}.mcool::resolutions/100000 compartment_signal.txt::${DATASET} --out_pref ./test/${DATASET}_cis
+	python ./src/quant_strength_cis.py Ulianov_et_al_${DATASET}.mcool::resolutions/100000 compartment_signal.txt::${DATASET} --out_pref ./test/${DATASET}_cis_strength
 	# Trans
-	python ./src/quant_strength_trans.py Ulianov_et_al_${DATASET}.mcool::resolutions/100000 compartment_signal.txt::${DATASET} --max_zeros 0.5 --out_pref ./test/${DATASET}_trans
+	python ./src/quant_strength_trans.py Ulianov_et_al_${DATASET}.mcool::resolutions/100000 compartment_signal.txt::${DATASET} --max_zeros 0.5 --out_pref ./test/${DATASET}_trans_strength
 	# By distance
-	python ./src/quant_strength_distance.py Ulianov_et_al_${DATASET}.mcool::resolutions/100000 compartment_signal.txt::${DATASET} --out_pref ./test/${DATASET}_distance --distance 10 25
+	python ./src/quant_strength_distance.py Ulianov_et_al_${DATASET}.mcool::resolutions/100000 compartment_signal.txt::${DATASET} --out_pref ./test/${DATASET}_distance_strength --distance 10 25
 done
 
 # Remove sample data

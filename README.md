@@ -28,7 +28,7 @@ conda env create -n pentads-env -f environment.yml
 conda activate pentads-env
 ```
 
-3. Run scripts on the sample dataset (this should take about 15 minutes to complete):
+3. Run scripts on the sample dataset (this should take about 15-25 minutes to complete):
 
 ```
 bash run_test.sh
@@ -168,6 +168,9 @@ usage: quant_strength_distance.py [-h] [--rescale_size RESCALE_SIZE]
                                   [--out_pref OUT_PREF]
                                   cool_file comp_signal
 ```
+
+Please note that compartments strength in trans calculations are rather sensitive to `max_zeros` parameter.
+
 
 ## Citing
 

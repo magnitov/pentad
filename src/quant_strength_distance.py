@@ -300,7 +300,7 @@ excl_chrms = args.excl_chrms.split(',')
 excl_chrms = excl_chrms + ['chr' + chrm for chrm in excl_chrms]
 out_pref = args.out_pref
 
-print('Running cis-by-distance pentad calculation for {} with {}'.format(cool_file, comp_signal))
+print('Quantifying cis-by-distance pentad compartment strength for {} with {}'.format(cool_file, comp_signal))
 
 #############################################
 # Read files
@@ -335,7 +335,6 @@ if interval_number > 2:
 
 print('Processing cis data by distance...')
 compartment_strength = { i: [ [], [] ] for i in distance_titles}
-areas_stats = { i: [ [0], [0], [0] ] for i in distance_titles}
 for chromosome in chromosomes:
     print('\tChromosome {}...'.format(chromosome))
 
@@ -382,9 +381,8 @@ for chromosome in chromosomes:
         average_compartment[i] = [np.nanmedian(x, axis = 0) for x in average_compartment[i]]
     for i in distance_titles:
         for j in range(3):
-            #areas_stats[i][j].append(len(average_compartment[i][j]))
             if j != 2: compartment_strength[i][j].append(
-                np.mean(average_compartment[i][j]) / np.mean(average_compartment[i][2])
+                np.nanmean(average_compartment[i][j]) / np.nanmean(average_compartment[i][2])
                 )
 
 print('Average compartment by distance calculated!')

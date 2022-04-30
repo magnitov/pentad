@@ -268,7 +268,7 @@ excl_chrms = args.excl_chrms.split(',')
 excl_chrms = excl_chrms + ['chr' + chrm for chrm in excl_chrms]
 out_pref = args.out_pref
 
-print('Running cis pentad calculation for {} with {}'.format(cool_file, comp_signal))
+print('Quantifying cis pentad compartment strength for {} with {}'.format(cool_file, comp_signal))
 
 #############################################
 # Read files
@@ -289,7 +289,6 @@ resolution = c.info['bin-size']
 #############################################
 
 print('Processing cis data...')
-areas_stats = [[0], [0], [0], [0], [0]]
 compartment_strength = [[], [], [], []]
 for chromosome in chromosomes:
     print('\tChromosome {}...'.format(chromosome))
@@ -338,9 +337,8 @@ for chromosome in chromosomes:
 
     average_compartment = [np.nanmedian(x, axis = 0) for x in average_compartment]
     for i in range(0, 5):
-        #areas_stats[i].append(len(average_compartment[i]))
         if i != 4: compartment_strength[i].append(
-            np.mean(average_compartment[i]) / np.mean(average_compartment[4])
+            np.nanmean(average_compartment[i]) / np.nanmean(average_compartment[4])
             )
 
 

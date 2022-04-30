@@ -6,8 +6,7 @@ import numpy as np
 import pandas as pd
 import multiprocess as mp
 import cooler
-from cooltools import numutils
-from cooltools.expected import trans_expected, blocksum_pairwise
+from cooltools import expected_trans
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -255,21 +254,7 @@ resolution = c.info['bin-size']
 # Prepare trans expected values
 #############################################
 
-supports = [(chrm, 0, chromsizes.loc[chrm,'length']) for chrm in chromosomes]
-balanced_transform = {"balanced": lambda pixels: pixels["count"] * pixels["weight1"] * pixels["weight2"]}
-
-records = blocksum_pairwise(c, supports,
-                            transforms=balanced_transform,
-                            chunksize=resolution,
-                            map=mp.Pool().map)
-
-trans_records = {
-        ( region1[0], region2[0] ): val for ( region1, region2 ), val in records.items()
-        }
-
-trans_df = pd.DataFrame.from_dict( trans_records, orient="index" )
-trans_df.index.rename( ["chrom1", "chrom2"], inplace=True )
-trans_df["balanced.avg"] = trans_df["balanced.sum"] / trans_df["n_valid"]
+trans_df = expected_trans(c)
 print('Trans-expected values calculated!')
 
 #############################################
@@ -300,7 +285,7 @@ for first_idx in range(len(chromosomes)):
     for second_idx in range(first_idx+1, len(chromosomes)):
 
         matrix = c.matrix(balance = True, sparse = True).fetch(chromosomes[first_idx], chromosomes[second_idx]).toarray()
-        matrix = np.nan_to_num(matrix) / trans_df.loc[chromosomes[first_idx], chromosomes[second_idx]]['balanced.avg']
+        matrix = np.nan_to_num(matrix) / trans_df[(trans_df['region1'] == chromosomes[first_idx]) & (trans_df['region2'] == chromosomes[second_idx])]['balanced.avg'].values[0]
 
         for i in range(len(all_intervals[chromosomes[first_idx]])):
             for j in range(len(all_intervals[chromosomes[second_idx]])):
