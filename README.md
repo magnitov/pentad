@@ -68,6 +68,10 @@ Maximum distance between two intervals in the chromosome. We find that compartme
 
 Distance boundaries in Mb separated by space. For example, 10 100 will give <10 Mb, 10-100 Mb, >100 Mb. This is used only for *cis* interactions stratified by distance.
 
+* **incl_chrms**
+
+Chromosomes to be included for the analysis. Not mandatory, but useful when a subset of chromosomes is going to be used.
+
 * **excl_chrms**
 
 Chromosomes to exclude from the analysis. By default, we exclude Y,M, and MT, which are sometimes presented in the Hi-C matrices.
@@ -91,9 +95,8 @@ For calculating the average compartment in any mode you will need two inputs: co
 **Average compartment in *cis*:**
 
 ```
-usage: get_pentad_cis.py [-h] [--rescale_size RESCALE_SIZE]
-                         [--min_dimension MIN_DIMENSION]
-                         [--max_zeros MAX_ZEROS] [--cutoff CUTOFF]
+usage: get_pentad_cis.py [-h] [--rescale_size RESCALE_SIZE] [--min_dimension MIN_DIMENSION]
+                         [--max_zeros MAX_ZEROS] [--cutoff CUTOFF] [--incl_chrms INCL_CHRMS]
                          [--excl_chrms EXCL_CHRMS] [--out_pref OUT_PREF]
                          cool_file comp_signal
 ```
@@ -101,21 +104,19 @@ usage: get_pentad_cis.py [-h] [--rescale_size RESCALE_SIZE]
 **Average compartment in *trans*:**
 
 ```
-usage: get_pentad_trans.py [-h] [--rescale_size RESCALE_SIZE]
-                           [--min_dimension MIN_DIMENSION]
-                           [--max_zeros MAX_ZEROS] [--excl_chrms EXCL_CHRMS]
-                           [--out_pref OUT_PREF]
+usage: get_pentad_trans.py [-h] [--rescale_size RESCALE_SIZE] [--min_dimension MIN_DIMENSION]
+                           [--max_zeros MAX_ZEROS] [--incl_chrms INCL_CHRMS]
+                           [--excl_chrms EXCL_CHRMS] [--out_pref OUT_PREF]
                            cool_file comp_signal
 ```
 
 **Average compartment in *cis* by distance:**
 
 ```
-usage: get_pentad_distance.py [-h] [--rescale_size RESCALE_SIZE]
-                              [--min_dimension MIN_DIMENSION]
-                              [--max_zeros MAX_ZEROS] [--cutoff CUTOFF]
-                              --distances DISTANCES [DISTANCES ...]
-                              [--excl_chrms EXCL_CHRMS] [--out_pref OUT_PREF]
+usage: get_pentad_distance.py [-h] [--rescale_size RESCALE_SIZE] [--min_dimension MIN_DIMENSION]
+                              [--max_zeros MAX_ZEROS] [--cutoff CUTOFF] --distances DISTANCES
+                              [DISTANCES ...] [--incl_chrms INCL_CHRMS] [--excl_chrms EXCL_CHRMS]
+                              [--out_pref OUT_PREF]
                               cool_file comp_signal
 ```
 
@@ -137,34 +138,30 @@ For calculating the average compartment strength in any mode you will need same 
 **Compartment strength in *cis*:**
 
 ```
-usage: quant_strength_cis.py [-h] [--rescale_size RESCALE_SIZE]
-                             [--min_dimension MIN_DIMENSION]
-                             [--max_zeros MAX_ZEROS] [--cutoff CUTOFF]
-                             [--center_width CENTER_WIDTH]
-                             [--excl_chrms EXCL_CHRMS] [--out_pref OUT_PREF]
+usage: quant_strength_cis.py [-h] [--rescale_size RESCALE_SIZE] [--min_dimension MIN_DIMENSION]
+                             [--max_zeros MAX_ZEROS] [--cutoff CUTOFF] [--center_width CENTER_WIDTH]
+                             [--incl_chrms INCL_CHRMS] [--excl_chrms EXCL_CHRMS]
+                             [--out_pref OUT_PREF]
                              cool_file comp_signal
 ```
 
 **Compartment strength in *trans*:**
 
 ```
-usage: quant_strength_trans.py [-h] [--rescale_size RESCALE_SIZE]
-                               [--min_dimension MIN_DIMENSION]
-                               [--max_zeros MAX_ZEROS]
-                               [--center_width CENTER_WIDTH]
-                               [--excl_chrms EXCL_CHRMS] [--out_pref OUT_PREF]
+usage: quant_strength_trans.py [-h] [--rescale_size RESCALE_SIZE] [--min_dimension MIN_DIMENSION]
+                               [--max_zeros MAX_ZEROS] [--center_width CENTER_WIDTH]
+                               [--incl_chrms INCL_CHRMS] [--excl_chrms EXCL_CHRMS]
+                               [--out_pref OUT_PREF]
                                cool_file comp_signal
 ```
 
 **Compartment strength in *cis* by distance:**
 
 ```
-usage: quant_strength_distance.py [-h] [--rescale_size RESCALE_SIZE]
-                                  [--min_dimension MIN_DIMENSION]
-                                  [--max_zeros MAX_ZEROS] [--cutoff CUTOFF]
-                                  --distances DISTANCES [DISTANCES ...]
-                                  [--center_width CENTER_WIDTH]
-                                  [--excl_chrms EXCL_CHRMS]
+usage: quant_strength_distance.py [-h] [--rescale_size RESCALE_SIZE] [--min_dimension MIN_DIMENSION]
+                                  [--max_zeros MAX_ZEROS] [--cutoff CUTOFF] --distances DISTANCES
+                                  [DISTANCES ...] [--center_width CENTER_WIDTH]
+                                  [--incl_chrms INCL_CHRMS] [--excl_chrms EXCL_CHRMS]
                                   [--out_pref OUT_PREF]
                                   cool_file comp_signal
 ```
@@ -178,6 +175,3 @@ If you find this visualization useful for your research, please cite our paper:
 
 Mikhail D. Magnitov, Azat K. Garaev, Alexander V. Tyakht, Sergey V. Ulianov & Sergey V. Razin. **Pentad: a tool for distance-dependent analysis of Hi-C interactions within and between chromatin compartments.** *BMC Bioinformatics* (2022)
 * doi: [10.1186/s12859-022-04654-6](https://doi.org/10.1186/s12859-022-04654-6)
-
-## Support
-In case you have any questions about the data or need some advice, please contact us via email: mikhail.magnitov@gmail.com (Mikhail Magnitov) or azatgk@yandex.ru (Azat Garaev).
