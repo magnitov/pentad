@@ -207,6 +207,8 @@ parser.add_argument('--min_dimension', default = 3, type = int, required = False
                     help = 'Minimum dimension of an area (in genomic bins)')
 parser.add_argument('--max_zeros', default = 0.1, type = float, required = False,
                     help = 'Maximum fraction of bins with zero contacts in an area')
+parser.add_argument('--incl_chrms', default='', type = str, required = False,
+                    help = 'Chromosomes to include for analysis')
 parser.add_argument('--excl_chrms', default = 'Y,M,MT', type = str, required = False,
                     help = 'Chromosomes to exclude from analysis')
 parser.add_argument('--out_pref', default = 'pentad_trans', type = str, required = False,
@@ -229,6 +231,11 @@ comp_signal = comp_signal[0]
 rescale_size = args.rescale_size
 min_dimension = args.min_dimension
 max_zeros = args.max_zeros
+incl_chrms = args.incl_chrms.split(',')
+if incl_chrms != '':
+    incl_chrms = incl_chrms + ['chr' + chrm for chrm in incl_chrms]
+else:
+    pass
 excl_chrms = args.excl_chrms.split(',')
 excl_chrms = excl_chrms + ['chr' + chrm for chrm in excl_chrms]
 out_pref = args.out_pref
@@ -246,6 +253,8 @@ if not os.path.isfile(comp_signal):
 
 c = cooler.Cooler(cool_file)
 chromosomes = c.chroms()[:]['name'].values
+if incl_chrms != '':
+    chromosomes = [chrm for chrm in chromosomes if chrm in incl_chrms]
 chromosomes = [chrm for chrm in chromosomes if chrm not in excl_chrms]
 chromsizes = c.chroms()[:][c.chroms()[:]['name'].map(lambda x: x in chromosomes)].set_index('name')
 resolution = c.info['bin-size']

@@ -240,6 +240,8 @@ parser.add_argument('--cutoff', default = 0.75, type = float, required = False,
                     help = 'Maximum distance between two intervals in chromosome fractions')
 parser.add_argument('--center_width', default = 0.6, type = float, required = False,
                     help = 'Size of the central fragment for background signal')
+parser.add_argument('--incl_chrms', default='', type = str, required = False,
+                    help = 'Chromosomes to include for analysis')
 parser.add_argument('--excl_chrms', default='Y,M,MT', type = str, required = False,
                     help = 'Chromosomes to exclude from analysis')
 parser.add_argument('--out_pref', default = 'pentad', type = str, required = False,
@@ -264,6 +266,11 @@ min_dimension = args.min_dimension
 max_zeros = args.max_zeros
 distance_cutoff = args.cutoff
 center_width = args.center_width
+incl_chrms = args.incl_chrms.split(',')
+if incl_chrms != '':
+    incl_chrms = incl_chrms + ['chr' + chrm for chrm in incl_chrms]
+else:
+    pass
 excl_chrms = args.excl_chrms.split(',')
 excl_chrms = excl_chrms + ['chr' + chrm for chrm in excl_chrms]
 out_pref = args.out_pref
@@ -281,6 +288,8 @@ if not os.path.isfile(comp_signal):
 
 c = cooler.Cooler(cool_file)
 chromosomes = c.chroms()[:]['name'].values
+if incl_chrms != '':
+    chromosomes = [chrm for chrm in chromosomes if chrm in incl_chrms]
 chromosomes = [chrm for chrm in chromosomes if chrm not in excl_chrms]
 resolution = c.info['bin-size']
 
