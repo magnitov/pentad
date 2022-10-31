@@ -80,6 +80,10 @@ Chromosomes to exclude from the analysis. By default, we exclude Y,M, and MT, wh
 
 Prefix for the output files. By default, we save the output to the same directory with prefix *pentad*.
 
+* **save_submatrices**
+
+A flag that indicates whether to save the extracted submatrices. Useful in case you want to perform any downstream analyses for the areas.
+
 * **center_width**
 
 Fraction of the central fragment of the square that represents intercompartental interactions used for compartment strenght quantification.
@@ -97,7 +101,7 @@ For calculating the average compartment in any mode you will need two inputs: co
 ```
 usage: get_pentad_cis.py [-h] [--rescale_size RESCALE_SIZE] [--min_dimension MIN_DIMENSION]
                          [--max_zeros MAX_ZEROS] [--cutoff CUTOFF] [--incl_chrms INCL_CHRMS]
-                         [--excl_chrms EXCL_CHRMS] [--out_pref OUT_PREF]
+                         [--excl_chrms EXCL_CHRMS] [--out_pref OUT_PREF] [--save_submatrices]
                          cool_file comp_signal
 ```
 
@@ -106,7 +110,7 @@ usage: get_pentad_cis.py [-h] [--rescale_size RESCALE_SIZE] [--min_dimension MIN
 ```
 usage: get_pentad_trans.py [-h] [--rescale_size RESCALE_SIZE] [--min_dimension MIN_DIMENSION]
                            [--max_zeros MAX_ZEROS] [--incl_chrms INCL_CHRMS]
-                           [--excl_chrms EXCL_CHRMS] [--out_pref OUT_PREF]
+                           [--excl_chrms EXCL_CHRMS] [--out_pref OUT_PREF] [--save_submatrices]
                            cool_file comp_signal
 ```
 
