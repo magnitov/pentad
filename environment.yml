@@ -12,5 +12,5 @@ dependencies:
     - opencv
     - seaborn
     - pip:
-        - cooler>=0.8.5
-        - cooltools>=0.5.0
+        - cooler==0.8.11
+        - cooltools==0.5.1

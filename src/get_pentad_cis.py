@@ -242,6 +242,8 @@ parser.add_argument('--excl_chrms', default='Y,M,MT', type = str, required = Fal
                     help = 'Chromosomes to exclude from analysis')
 parser.add_argument('--out_pref', default = 'pentad', type = str, required = False,
                     help='Prefix for the output files')
+parser.add_argument('--save_submatrices', action='store_true', required = False,
+                    help='Whether to save extracted submatrices')
 
 args = parser.parse_args()
 
@@ -264,6 +266,7 @@ distance_cutoff = args.cutoff
 excl_chrms = args.excl_chrms.split(',')
 excl_chrms = excl_chrms + ['chr' + chrm for chrm in excl_chrms]
 out_pref = args.out_pref
+save_submatrices = args.save_submatrices
 
 print('Running cis pentad calculation for {} with {}'.format(cool_file, comp_signal))
 
@@ -331,6 +334,8 @@ for chromosome in chromosomes:
     for i in range(0, 5):
         areas_stats[i].append(len(average_compartment[i])-np.sum(areas_stats[i]))
 
+if save_submatrices:
+    np.save(out_pref + '.npy', np.array(average_compartment))
 
 average_compartment = [np.nanmedian(x, axis = 0) for x in average_compartment]
 print('Average compartment in cis calculated!')
