@@ -34,11 +34,13 @@ def open_eigenvector(bedgraph_file, chromosome, column = None):
     """
 
     if column == None:
-        signal = pd.read_csv(bedgraph_file, header = None, sep = '\t', names = ['chrom', 'start', 'end', 'PC1'])
-        return(list(signal[signal['chrom'] == chromosome]['PC1'].values))
+        signal = pd.read_csv(bedgraph_file, header = 0, sep = '\t', names = ['chrom', 'start', 'end', 'PC1'])
+        signal['chrom'] = [str(x) for x in signal['chrom'].values]
+        return(list(signal[signal['chrom'] == str(chromosome)]['PC1'].values))
     else:
         signal = pd.read_csv(bedgraph_file, header = 0, sep = '\t')
-        return(list(signal[signal['chrom'] == chromosome][column].values))
+        signal['chrom'] = [str(x) for x in signal['chrom'].values]
+        return(list(signal[signal['chrom'] == str(chromosome)][column].values))
 
 #############################################
 
