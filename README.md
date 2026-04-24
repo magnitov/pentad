@@ -171,3 +171,11 @@ If you find this visualization useful for your research, please cite our paper:
 
 Mikhail D. Magnitov, Azat K. Garaev, Alexander V. Tyakht, Sergey V. Ulianov & Sergey V. Razin. **Pentad: a tool for distance-dependent analysis of Hi-C interactions within and between chromatin compartments.** *BMC Bioinformatics* (2022)
 * doi: [10.1186/s12859-022-04654-6](https://doi.org/10.1186/s12859-022-04654-6)
+
+### Papers using Pentad
+- Antunes *et al.* **[Chromosome compartment assembly is essential for subtelomeric gene silencing in trypanosomes.](https://doi.org/10.1038/s41467-025-66824-3)**, *Nature Communications* (2025).
+- Zhang *et al* **[Spatial Reorganization of Chromatin Architecture Shapes the Expression Phenotype of Therapy-Induced Senescent Cells](https://doi.org/10.1111/acel.70366)**, *Aging Cell* (2026).
+- Liu *et al.* **[Temporal dynamic and GhGLR4.8-mediated reorganization of 3D chromatin architecture during Fusarium oxysporum f. sp. vasinfectum infection in cotton](https://doi.org/10.1016/j.jare.2026.03.002)**, *Journal of Advanced Research* (2026).
+- Sharif *et al.* **[SINE retrotransposons link replication timing with higher-order genome organization by recruiting H2B monoubiquitination to the gene body](https://doi.org/10.21203/rs.3.rs-7260042/v1)**, *Research Square* (2025).
+- Choubani *et al.* **[Cell cycle-resolved Hi-C reveals unexpected plasticity of A/B compartments across interphase](https://doi.org/10.64898/2025.12.06.692720)**, *bioRxiv* (2025).
+- Gérard *et al.* **[Identification of Parkinson’s disease-associated regulatory variants in human dopaminergic neurons reveals modulators of SCARB2 and BAG3 expression](https://doi.org/10.64898/2026.03.26.714241)**, *bioRxiv* (2026).
