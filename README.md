@@ -175,7 +175,7 @@ Mikhail D. Magnitov, Azat K. Garaev, Alexander V. Tyakht, Sergey V. Ulianov & Se
 ### Papers using Pentad
 - Antunes *et al.* **[Chromosome compartment assembly is essential for subtelomeric gene silencing in trypanosomes.](https://doi.org/10.1038/s41467-025-66824-3)**, *Nature Communications* (2025).
 - Zhang *et al* **[Spatial Reorganization of Chromatin Architecture Shapes the Expression Phenotype of Therapy-Induced Senescent Cells](https://doi.org/10.1111/acel.70366)**, *Aging Cell* (2026).
-- Oji *et al.* **[Nuclear compartmentalization at the G1/S transition plays a key role in DNA replication control]([https://doi.org/10.1038/s41467-026-75264-6])**, *Nature Communications* (2026).
+- Oji *et al.* **[Nuclear compartmentalization at the G1/S transition plays a key role in DNA replication control](https://doi.org/10.1038/s41467-026-75264-6)**, *Nature Communications* (2026).
 - Liu *et al.* **[Temporal dynamic and GhGLR4.8-mediated reorganization of 3D chromatin architecture during Fusarium oxysporum f. sp. vasinfectum infection in cotton](https://doi.org/10.1016/j.jare.2026.03.002)**, *Journal of Advanced Research* (2026).
 - Sharif *et al.* **[SINE retrotransposons link replication timing with higher-order genome organization by recruiting H2B monoubiquitination to the gene body](https://doi.org/10.21203/rs.3.rs-7260042/v1)**, *Research Square* (2025).
 - Choubani *et al.* **[Cell cycle-resolved Hi-C reveals unexpected plasticity of A/B compartments across interphase](https://doi.org/10.64898/2025.12.06.692720)**, *bioRxiv* (2025).
